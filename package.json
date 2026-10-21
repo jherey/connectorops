@@ -1,0 +1,46 @@
+{
+	"name": "connectorops",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Enterprise readiness and continuous certification for n8n connectors",
+	"type": "module",
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
+	"engines": {
+		"node": ">=24 <25",
+		"npm": ">=11 <12"
+	},
+	"packageManager": "npm@11.9.0",
+	"scripts": {
+		"build": "npm run build --workspaces --if-present",
+		"artifacts:pack": "npm run node:pack && npm run simulator:pack",
+		"compose:config": "node scripts/compose.mjs config --quiet",
+		"compose:logs": "node scripts/compose.mjs logs --no-color",
+		"compose:up": "node scripts/compose.mjs up --build --detach",
+		"dev": "npm run artifacts:pack && node scripts/compose.mjs up --build",
+		"down": "node scripts/compose.mjs down",
+		"format": "prettier --write .",
+		"format:check": "prettier --check .",
+		"lint": "eslint .",
+		"node:pack": "node scripts/pack-n8n-node.mjs",
+		"simulator:pack": "node scripts/pack-acme-api.mjs",
+		"smoke": "node scripts/smoke.mjs",
+		"test": "npm run test --workspaces --if-present",
+		"test:unit": "npm test",
+		"typecheck": "npm run typecheck --workspaces --if-present",
+		"validate": "npm run format:check && npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run compose:config"
+	},
+	"devDependencies": {
+		"@eslint/js": "9.39.5",
+		"@types/node": "24.19.2",
+		"esbuild": "0.27.4",
+		"eslint": "9.39.5",
+		"prettier": "3.9.10",
+		"tsx": "4.23.15",
+		"typescript": "5.9.3",
+		"typescript-eslint": "8.72.0",
+		"vitest": "5.0.5"
+	}
+}

@@ -125,3 +125,15 @@ next milestone is a thin vertical slice: create one customer through the custom
 node, certify its timeout and duplicate-delivery behavior, and produce the first
 readiness report.
 
+## Local development
+
+ConnectorOps uses Node.js 24, npm workspaces, and Docker Compose. Once the custom
+node package is present, the full local topology starts with:
+
+```bash
+npm ci
+npm run dev
+```
+
+See [getting started](docs/getting-started.md) for prerequisites, focused
+development commands, readiness verification, and safe teardown.

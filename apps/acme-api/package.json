@@ -1,0 +1,32 @@
+{
+	"name": "@connectorops/acme-api",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Deterministic enterprise partner API simulator for ConnectorOps",
+	"type": "module",
+	"files": [
+		"dist",
+		"dist-bundle"
+	],
+	"engines": {
+		"node": ">=24 <25",
+		"npm": ">=11 <12"
+	},
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"build:bundle": "esbuild src/server.ts --bundle --format=cjs --platform=node --target=node24 --outfile=dist-bundle/server.cjs",
+		"dev": "tsx watch src/server.ts",
+		"lint": "eslint src",
+		"start": "node dist/server.js",
+		"test": "vitest run",
+		"test:unit": "npm test",
+		"typecheck": "tsc -p tsconfig.json --noEmit"
+	},
+	"dependencies": {
+		"fastify": "5.12.7"
+	},
+	"devDependencies": {
+		"@types/node": "24.19.2",
+		"typescript": "5.9.3"
+	}
+}

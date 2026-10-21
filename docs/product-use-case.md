@@ -69,16 +69,16 @@ having to interpret raw test logs.
 
 The first profile targets an AcmeCRM `Customer` and `Order` connector.
 
-| Capability | Scenario | Required behavior |
-| --- | --- | --- |
-| Authentication | Token expires during pagination | Refresh once and continue without losing or duplicating records |
-| Rate limits | API returns `429` and `Retry-After` | Wait as directed and retry within the configured budget |
-| Pagination | Dataset spans multiple cursor pages | Return every unique record exactly once |
-| Idempotency | Create succeeds but response times out | Retry safely and create one remote order |
-| Webhooks | Event is duplicated and delivered out of order | Process once or expose an explicit ordering limitation |
-| Async jobs | Export remains pending before completion | Poll with bounded backoff and stop at a clear timeout |
-| Contract drift | Required response field changes type | Block certification with a precise compatibility error |
-| Security | Errors include tokens or sensitive fields upstream | Redact secrets and configured sensitive fields from evidence |
+| Capability     | Scenario                                           | Required behavior                                               |
+| -------------- | -------------------------------------------------- | --------------------------------------------------------------- |
+| Authentication | Token expires during pagination                    | Refresh once and continue without losing or duplicating records |
+| Rate limits    | API returns `429` and `Retry-After`                | Wait as directed and retry within the configured budget         |
+| Pagination     | Dataset spans multiple cursor pages                | Return every unique record exactly once                         |
+| Idempotency    | Create succeeds but response times out             | Retry safely and create one remote order                        |
+| Webhooks       | Event is duplicated and delivered out of order     | Process once or expose an explicit ordering limitation          |
+| Async jobs     | Export remains pending before completion           | Poll with bounded backoff and stop at a clear timeout           |
+| Contract drift | Required response field changes type               | Block certification with a precise compatibility error          |
+| Security       | Errors include tokens or sensitive fields upstream | Redact secrets and configured sensitive fields from evidence    |
 
 ## Readiness model
 
@@ -133,4 +133,3 @@ The reusable asset is not the fictional AcmeCRM node. It is the operating model:
 a scenario contract, a repeatable simulator, a shared readiness rubric, and an
 evidence format that helps an integration team and a strategic partner resolve
 failures together.
-
