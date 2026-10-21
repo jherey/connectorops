@@ -23,40 +23,68 @@ const captureFailure = (failure: SanitizedRequestFailure): never => {
 };
 
 describe('createOrder', () => {
-	test('retries a timeout with the exact same safe request and returns the second response', async () => {
-		const timeout = Object.assign(new Error('secret API token: do-not-leak'), {
-			code: 'ETIMEDOUT',
-		});
+	test.each(['ETIMEDOUT', 'ECONNABORTED'])(
+		'retries a %s timeout with the exact same safe request and returns the second response',
+		async (timeoutCode) => {
+			const timeout = Object.assign(new Error('secret API token: do-not-leak'), {
+				code: timeoutCode,
+			});
+			const transport = vi
+				.fn<(request: CreateOrderRequest) => Promise<{ id: string }>>()
+				.mockRejectedValueOnce(timeout)
+				.mockResolvedValueOnce({ id: 'acme-order-1' });
+			const sleep = vi.fn().mockResolvedValue(undefined);
+
+			await expect(
+				createOrder({
+					baseUrl: 'https://simulator.example/runs/run-42/',
+					input,
+					transport,
+					sleep,
+					onFailure: captureFailure,
+				}),
+			).resolves.toEqual({ id: 'acme-order-1' });
+
+			expect(transport).toHaveBeenCalledTimes(2);
+			const firstRequest = transport.mock.calls[0][0];
+			const secondRequest = transport.mock.calls[1][0];
+			expect(secondRequest).toBe(firstRequest);
+			expect(firstRequest).toEqual({
+				method: 'POST',
+				url: 'https://simulator.example/runs/run-42/v1/orders',
+				headers: { 'Idempotency-Key': expect.stringMatching(/^co_[a-f0-9]{64}$/) },
+				body: input,
+			});
+			expect(secondRequest.url).toBe(firstRequest.url);
+			expect(secondRequest.body).toEqual(firstRequest.body);
+			expect(secondRequest.headers['Idempotency-Key']).toBe(
+				firstRequest.headers['Idempotency-Key'],
+			);
+			expect(sleep).toHaveBeenCalledOnce();
+		},
+	);
+
+	test('retries when n8n wraps a transport timeout as the error cause', async () => {
 		const transport = vi
 			.fn<(request: CreateOrderRequest) => Promise<{ id: string }>>()
-			.mockRejectedValueOnce(timeout)
+			.mockRejectedValueOnce({
+				cause: Object.assign(new Error('request timed out'), {
+					code: 'ECONNABORTED',
+				}),
+			})
 			.mockResolvedValueOnce({ id: 'acme-order-1' });
-		const sleep = vi.fn().mockResolvedValue(undefined);
 
 		await expect(
 			createOrder({
-				baseUrl: 'https://simulator.example/runs/run-42/',
+				baseUrl: 'https://simulator.example/runs/run-42',
 				input,
 				transport,
-				sleep,
+				sleep: vi.fn().mockResolvedValue(undefined),
 				onFailure: captureFailure,
 			}),
 		).resolves.toEqual({ id: 'acme-order-1' });
 
 		expect(transport).toHaveBeenCalledTimes(2);
-		const firstRequest = transport.mock.calls[0][0];
-		const secondRequest = transport.mock.calls[1][0];
-		expect(secondRequest).toBe(firstRequest);
-		expect(firstRequest).toEqual({
-			method: 'POST',
-			url: 'https://simulator.example/runs/run-42/v1/orders',
-			headers: { 'Idempotency-Key': expect.stringMatching(/^co_[a-f0-9]{64}$/) },
-			body: input,
-		});
-		expect(secondRequest.url).toBe(firstRequest.url);
-		expect(secondRequest.body).toEqual(firstRequest.body);
-		expect(secondRequest.headers['Idempotency-Key']).toBe(firstRequest.headers['Idempotency-Key']);
-		expect(sleep).toHaveBeenCalledOnce();
 	});
 
 	test('uses a stable idempotency key across repeated executions', async () => {

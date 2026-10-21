@@ -1,6 +1,5 @@
 import type {
 	IExecuteFunctions,
-	IHttpRequestOptions,
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
@@ -8,6 +7,7 @@ import type {
 } from 'n8n-workflow';
 import { NodeApiError, NodeConnectionTypes, NodeOperationError, sleep } from 'n8n-workflow';
 import { createOrder, type CreateOrderRequest, type SanitizedRequestFailure } from './create-order';
+import { toHttpRequestOptions } from './request-options';
 
 type CreateOrderResponse = JsonObject & {
 	id: string;
@@ -91,6 +91,16 @@ export class AcmeCrm implements INodeType {
 				default: 'USD',
 				description: 'Three-letter ISO 4217 currency code',
 			},
+			{
+				displayName: 'Request Timeout (Ms)',
+				name: 'requestTimeoutMs',
+				type: 'number',
+				required: true,
+				typeOptions: { minValue: 50, maxValue: 120_000, numberStepSize: 50 },
+				default: 5_000,
+				description:
+					'Maximum time to wait for each HTTP attempt. Retries reuse the same idempotency key.',
+			},
 		],
 	};
 
@@ -124,10 +134,15 @@ export class AcmeCrm implements INodeType {
 					this.getNodeParameter('currency', itemIndex),
 					itemIndex,
 				);
+				const requestTimeoutMs = requireRequestTimeout(
+					this,
+					this.getNodeParameter('requestTimeoutMs', itemIndex),
+					itemIndex,
+				);
 				const response = await createOrder<CreateOrderResponse>({
 					baseUrl,
 					input: { externalOrderId, customerId, amountMinor, currency },
-					transport: async (request) => await executeRequest.call(this, request),
+					transport: async (request) => await executeRequest.call(this, request, requestTimeoutMs),
 					sleep,
 					onFailure: (failure) => {
 						throw createHttpNodeError(this, failure, itemIndex);
@@ -209,6 +224,21 @@ function requireCurrency(context: IExecuteFunctions, value: unknown, itemIndex: 
 	return value.trim().toUpperCase();
 }
 
+function requireRequestTimeout(
+	context: IExecuteFunctions,
+	value: unknown,
+	itemIndex: number,
+): number {
+	if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 50 || value > 120_000) {
+		throw new NodeOperationError(
+			context.getNode(),
+			'Request Timeout (ms) must be an integer between 50 and 120000',
+			{ itemIndex },
+		);
+	}
+	return value;
+}
+
 function createHttpNodeError(
 	context: IExecuteFunctions,
 	failure: SanitizedRequestFailure,
@@ -227,14 +257,9 @@ function createHttpNodeError(
 async function executeRequest(
 	this: IExecuteFunctions,
 	request: CreateOrderRequest,
+	timeout: number,
 ): Promise<CreateOrderResponse> {
-	const options: IHttpRequestOptions = {
-		method: request.method,
-		url: request.url,
-		headers: request.headers,
-		body: request.body,
-		json: true,
-	};
+	const options = toHttpRequestOptions(request, timeout);
 	return (await this.helpers.httpRequestWithAuthentication.call(
 		this,
 		'acmeCrmApi',

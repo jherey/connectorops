@@ -82,9 +82,21 @@ function classifyHttpError(error: unknown): RetryDecision {
 }
 
 function isRetryableNetworkError(error: unknown): boolean {
-	if (!isRecord(error)) return false;
-	const code = typeof error.code === 'string' ? error.code.toUpperCase() : '';
-	return ['ECONNRESET', 'ETIMEDOUT', 'ESOCKETTIMEDOUT', 'UND_ERR_HEADERS_TIMEOUT'].includes(code);
+	const code = readErrorCode(error);
+	return [
+		'ECONNABORTED',
+		'ECONNRESET',
+		'ETIMEDOUT',
+		'ESOCKETTIMEDOUT',
+		'UND_ERR_HEADERS_TIMEOUT',
+	].includes(code);
+}
+
+function readErrorCode(error: unknown, seen = new Set<unknown>()): string {
+	if (!isRecord(error) || seen.has(error)) return '';
+	seen.add(error);
+	if (typeof error.code === 'string') return error.code.toUpperCase();
+	return readErrorCode(error.cause, seen);
 }
 
 function readStatusCode(error: unknown): number | undefined {

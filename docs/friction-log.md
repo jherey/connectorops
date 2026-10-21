@@ -99,6 +99,49 @@ payloads in an entry.
 
 ## Addressed friction
 
+### F-012: n8n wraps transport error codes in `NodeApiError.cause`
+
+- **Observed:** 2026-10-22
+- **Context:** Executing the timeout-after-commit workflow with n8n 2.44.5
+- **Friction:** The simulator committed the order and the 100 ms client timeout
+  fired, but the connector did not retry because it inspected only the wrapper
+  error while `ECONNABORTED` was stored on its nested cause.
+- **Evidence:** The first live workflow run recorded one `created` request and
+  one order, then ended with the connector's sanitized exhausted-policy error.
+- **Resolution:** Traverse the error cause chain without cycles when reading
+  transport codes; add direct Axios and n8n-wrapped timeout regression tests.
+- **Status:** Addressed
+
+### F-011: The custom-node pack command could archive stale build output
+
+- **Observed:** 2026-10-22
+- **Context:** Repacking the connector after fixing timeout classification
+- **Friction:** Source tests passed, but the installed tarball still contained
+  the previous compiled JavaScript because `node:pack` did not build first.
+- **Evidence:** The source and package timestamps changed while
+  `dist/nodes/AcmeCrm/create-order.js` did not contain the new timeout code.
+- **Resolution:** Make `scripts/pack-n8n-node.mjs` run the node build before
+  every pack, so an immutable artifact cannot silently lag its source.
+- **Status:** Addressed
+
+### F-010: Cloud Docker exhausted root inodes with the VFS storage driver
+
+- **Observed:** 2026-10-22
+- **Context:** Rebuilding and recreating the local Compose stack in the cloud
+- **Friction:** The root filesystem had free bytes but no free inodes. Docker's
+  VFS driver deep-copied the large n8n image and failed while creating container
+  init layers with `no space left on device`.
+- **Evidence:** `df -i /workspace` reached 100%, while `/tmp` retained over four
+  million free inodes. The immutable images built successfully; container
+  creation failed during the layer copy.
+- **Workaround:** Validate the same pinned n8n package and packed community node
+  from `/tmp`, with Postgres in Docker and the simulator in the same bounded
+  validation process. Standard Docker hosts continue to use Compose.
+- **Next action:** Give the cloud Docker data root a filesystem with a larger
+  inode budget or a copy-on-write storage driver before requiring Compose E2E
+  on this runner.
+- **Status:** Open (environment constraint)
+
 ### F-003: The default npm cache directory was unavailable in the cloud image
 
 - **Observed:** 2026-10-22
