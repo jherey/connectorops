@@ -70,7 +70,7 @@ export function sanitizeRequestFailure(error: unknown): SanitizedRequestFailure 
 	};
 }
 
-function classifyHttpError(error: unknown): RetryDecision {
+export function classifyHttpError(error: unknown): RetryDecision {
 	const statusCode = readStatusCode(error);
 	return {
 		retryable:
@@ -92,34 +92,71 @@ function isRetryableNetworkError(error: unknown): boolean {
 	].includes(code);
 }
 
-function readErrorCode(error: unknown, seen = new Set<unknown>()): string {
-	if (!isRecord(error) || seen.has(error)) return '';
-	seen.add(error);
-	if (typeof error.code === 'string') return error.code.toUpperCase();
-	return readErrorCode(error.cause, seen);
+function readErrorCode(error: unknown): string {
+	return (
+		readErrorChain(error, (candidate) =>
+			typeof candidate.code === 'string' ? candidate.code.toUpperCase() : undefined,
+		) ?? ''
+	);
 }
 
 function readStatusCode(error: unknown): number | undefined {
-	if (!isRecord(error)) return undefined;
+	return readErrorChain(error, readDirectStatusCode);
+}
+
+function readRetryAfter(error: unknown): string | undefined {
+	return readErrorChain(error, readDirectRetryAfter);
+}
+
+function readDirectStatusCode(error: Record<string, unknown>): number | undefined {
 	if (typeof error.statusCode === 'number') return error.statusCode;
 	if (typeof error.httpCode === 'number') return error.httpCode;
 	if (typeof error.httpCode === 'string') {
 		const parsed = Number.parseInt(error.httpCode, 10);
 		if (Number.isFinite(parsed)) return parsed;
 	}
-	if (isRecord(error.response) && typeof error.response.status === 'number') {
-		return error.response.status;
+	if (isRecord(error.response)) {
+		if (typeof error.response.status === 'number') return error.response.status;
+		if (typeof error.response.statusCode === 'number') return error.response.statusCode;
 	}
 	return undefined;
 }
 
-function readRetryAfter(error: unknown): string | undefined {
-	if (!isRecord(error) || !isRecord(error.response) || !isRecord(error.response.headers)) {
-		return undefined;
-	}
-	const retryAfter = error.response.headers['retry-after'];
+function readDirectRetryAfter(error: Record<string, unknown>): string | undefined {
+	const directHeader = readRetryAfterHeader(error.headers);
+	if (directHeader !== undefined) return directHeader;
+	if (!isRecord(error.response)) return undefined;
+	return readRetryAfterHeader(error.response.headers);
+}
+
+function readRetryAfterHeader(headers: unknown): string | undefined {
+	if (!isRecord(headers)) return undefined;
+	const retryAfterEntry = Object.entries(headers).find(
+		([name]) => name.toLowerCase() === 'retry-after',
+	);
+	const retryAfter = retryAfterEntry?.[1];
 	if (typeof retryAfter === 'string') return retryAfter;
 	if (typeof retryAfter === 'number') return String(retryAfter);
+	return undefined;
+}
+
+const MAX_ERROR_CAUSE_DEPTH = 8;
+
+function readErrorChain<T>(
+	error: unknown,
+	read: (candidate: Record<string, unknown>) => T | undefined,
+): T | undefined {
+	const seen = new Set<unknown>();
+	let candidate = error;
+
+	for (let depth = 0; depth < MAX_ERROR_CAUSE_DEPTH; depth++) {
+		if (!isRecord(candidate) || seen.has(candidate)) return undefined;
+		seen.add(candidate);
+		const value = read(candidate);
+		if (value !== undefined) return value;
+		candidate = candidate.cause;
+	}
+
 	return undefined;
 }
 

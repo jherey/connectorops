@@ -108,6 +108,17 @@ export class MemorySimulatorStore implements SimulatorStore {
 			}
 		}
 
+		if (
+			state.run.scenario === 'rate-limit-then-success' &&
+			state.run.faultTriggeredAt === null
+		) {
+			state.run.faultTriggeredAt = new Date().toISOString()
+			state.requests.push(
+				capture(input, requestHash, 'rate_limited', 429, null),
+			)
+			return { kind: 'rate-limited', shouldDelay: false }
+		}
+
 		const order: Order = {
 			id: newId(),
 			...input.order,
@@ -118,7 +129,9 @@ export class MemorySimulatorStore implements SimulatorStore {
 			state.idempotency.set(input.idempotencyKey, { requestHash, order })
 		}
 
-		const shouldDelay = state.run.faultTriggeredAt === null
+		const shouldDelay =
+			state.run.scenario === 'timeout-after-commit' &&
+			state.run.faultTriggeredAt === null
 		if (shouldDelay) state.run.faultTriggeredAt = new Date().toISOString()
 		state.requests.push(capture(input, requestHash, 'created', 201, order.id))
 

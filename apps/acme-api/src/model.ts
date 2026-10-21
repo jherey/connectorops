@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
 
-export type Scenario = 'timeout-after-commit'
+export type Scenario = 'timeout-after-commit' | 'rate-limit-then-success'
 
 export type Run = {
 	runId: string
@@ -28,7 +28,7 @@ export type CapturedRequest = {
 	path: string
 	idempotencyKeyHash: string | null
 	requestHash: string
-	outcome: 'created' | 'replayed' | 'conflict'
+	outcome: 'created' | 'replayed' | 'conflict' | 'rate_limited'
 	statusCode: number
 	orderId: string | null
 	occurredAt: string
@@ -47,6 +47,7 @@ export type CreateOrderResult =
 			shouldDelay: boolean
 	  }
 	| { kind: 'conflict'; shouldDelay: false }
+	| { kind: 'rate-limited'; shouldDelay: false }
 	| { kind: 'run-not-found'; shouldDelay: false }
 
 export function canonicalize(value: unknown): string {

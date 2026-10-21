@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
 import pg from 'pg'
@@ -40,11 +40,16 @@ export class PostgresSimulatorStore implements SimulatorStore {
 	}
 
 	async migrate(): Promise<void> {
-		const migration = await readFile(
-			resolve(this.#migrationsDirectory, '0001_init.sql'),
-			'utf8',
-		)
-		await this.#pool.query(migration)
+		const migrations = (await readdir(this.#migrationsDirectory))
+			.filter((file) => file.endsWith('.sql'))
+			.sort()
+		for (const migrationFile of migrations) {
+			const migration = await readFile(
+				resolve(this.#migrationsDirectory, migrationFile),
+				'utf8',
+			)
+			await this.#pool.query(migration)
+		}
 	}
 
 	async isReady(): Promise<boolean> {
@@ -163,6 +168,27 @@ export class PostgresSimulatorStore implements SimulatorStore {
 				}
 			}
 
+			if (
+				run.scenario === 'rate-limit-then-success' &&
+				run.fault_triggered_at === null
+			) {
+				await client.query(
+					`UPDATE certification_runs SET fault_triggered_at = CURRENT_TIMESTAMP
+					 WHERE run_id = $1`,
+					[input.runId],
+				)
+				await insertCapture(
+					client,
+					input,
+					requestHash,
+					'rate_limited',
+					429,
+					null,
+				)
+				await client.query('COMMIT')
+				return { kind: 'rate-limited', shouldDelay: false }
+			}
+
 			const order: Order = {
 				id: newId(),
 				...input.order,
@@ -192,7 +218,9 @@ export class PostgresSimulatorStore implements SimulatorStore {
 				)
 			}
 
-			const shouldDelay = run.fault_triggered_at === null
+			const shouldDelay =
+				run.scenario === 'timeout-after-commit' &&
+				run.fault_triggered_at === null
 			if (shouldDelay) {
 				await client.query(
 					`UPDATE certification_runs SET fault_triggered_at = CURRENT_TIMESTAMP

@@ -4,6 +4,7 @@ export type {
 	AssertionStatus,
 	CertificationAssertion,
 	CertificationOptions,
+	CertificationProfile,
 	CertificationReport,
 	ClientMode,
 	DecisionStatus,

@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS certification_runs (
   run_id TEXT PRIMARY KEY,
-  scenario TEXT NOT NULL CHECK (scenario IN ('timeout-after-commit')),
+  scenario TEXT NOT NULL CHECK (scenario IN ('timeout-after-commit', 'rate-limit-then-success')),
   delay_ms INTEGER NOT NULL CHECK (delay_ms >= 0 AND delay_ms <= 60000),
   fault_triggered_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS captured_requests (
   path TEXT NOT NULL,
   idempotency_key_hash TEXT,
   request_hash TEXT NOT NULL,
-  outcome TEXT NOT NULL CHECK (outcome IN ('created', 'replayed', 'conflict')),
+  outcome TEXT NOT NULL CHECK (outcome IN ('created', 'replayed', 'conflict', 'rate_limited')),
   status_code INTEGER NOT NULL,
   order_id UUID,
   occurred_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
