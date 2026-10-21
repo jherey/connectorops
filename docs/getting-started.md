@@ -60,8 +60,9 @@ npm run dev --workspace @connectorops/acme-api
 ```
 
 The simulator exposes liveness at `/healthz` and revision-aware readiness at
-`/healthz/readiness`. Its fault controls and scenario API will be added with the
-first certification slice.
+`/healthz/readiness`. Authenticated control routes configure isolated
+`timeout-after-commit` and `rate-limit-then-success` runs; the partner routes
+then expose those faults while recording sanitized observations.
 
 ## Validate a change
 
@@ -83,6 +84,16 @@ This command uses a dedicated Compose project to start only Postgres, discovers
 its loopback-only published port, runs the database test, and stops only the
 service it started. It does not disturb the development stack or delete either
 Postgres volume.
+
+Generate fresh safe and negative-control application evidence:
+
+```bash
+npm run evidence:generate
+```
+
+This runs executable in-memory scenarios and replaces the synthetic examples
+under `docs/examples`. It fails unless the safe run is `CERTIFIED` and the
+negative control is `BLOCKED`.
 
 ## Generated artifacts
 

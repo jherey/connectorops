@@ -67,18 +67,19 @@ having to interpret raw test logs.
 
 ## First certification profile
 
-The first profile targets an AcmeCRM `Customer` and `Order` connector.
+The product direction targets the following AcmeCRM capabilities. The status
+column separates the executable slice from the roadmap.
 
-| Capability     | Scenario                                           | Required behavior                                               |
-| -------------- | -------------------------------------------------- | --------------------------------------------------------------- |
-| Authentication | Token expires during pagination                    | Refresh once and continue without losing or duplicating records |
-| Rate limits    | API returns `429` and `Retry-After`                | Wait as directed and retry within the configured budget         |
-| Pagination     | Dataset spans multiple cursor pages                | Return every unique record exactly once                         |
-| Idempotency    | Create succeeds but response times out             | Retry safely and create one remote order                        |
-| Webhooks       | Event is duplicated and delivered out of order     | Process once or expose an explicit ordering limitation          |
-| Async jobs     | Export remains pending before completion           | Poll with bounded backoff and stop at a clear timeout           |
-| Contract drift | Required response field changes type               | Block certification with a precise compatibility error          |
-| Security       | Errors include tokens or sensitive fields upstream | Redact secrets and configured sensitive fields from evidence    |
+| Capability     | Scenario                               | Required behavior                           | Status                            |
+| -------------- | -------------------------------------- | ------------------------------------------- | --------------------------------- |
+| Idempotency    | Create succeeds but response times out | Retry safely and create one remote order    | Implemented                       |
+| Rate limits    | API returns `429` and `Retry-After`    | Wait as directed and retry within budget    | Implemented                       |
+| Security       | Upstream error contains secrets        | Redact credentials from errors and evidence | Implemented at current boundaries |
+| Authentication | Token expires during pagination        | Refresh once and continue without loss      | Roadmap                           |
+| Pagination     | Dataset spans multiple cursor pages    | Return every unique record exactly once     | Roadmap                           |
+| Webhooks       | Event is duplicated and out of order   | Process once or state the limitation        | Roadmap                           |
+| Async jobs     | Export remains pending                 | Poll with bounded backoff and stop clearly  | Roadmap                           |
+| Contract drift | Required field changes type            | Block with a precise compatibility error    | Roadmap                           |
 
 ## Readiness model
 
@@ -108,15 +109,17 @@ placing an enterprise release decision behind a nondeterministic model.
 
 ## Success measures
 
-The first milestone succeeds when it can demonstrate that:
+The completed vertical slice demonstrates that:
 
 - A new developer can start the system and run certification from documented
   commands.
-- The timeout-after-success scenario creates exactly one remote order.
-- Duplicate webhook delivery creates exactly one observable side effect.
+- The timeout-after-commit safe scenario creates exactly one remote order.
+- The deliberately unsafe timeout control creates duplicates and is blocked.
 - Rate-limit behavior can be measured rather than inferred from logs.
-- A contract-breaking change blocks certification with useful evidence.
 - The complete certification run is reproducible in CI without public APIs.
+
+Webhook deduplication and contract-drift blocking remain future milestone
+success measures.
 
 ## Non-goals for the first version
 
