@@ -153,4 +153,3 @@ it contains environment bindings, and reproducible from declared inputs.
 The transferable lesson is operational discipline: local parity, deterministic
 tests, explicit architecture, disposable environments, and proof that the
 deployed artifact is the artifact that passed validation.
-

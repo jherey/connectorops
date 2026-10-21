@@ -93,12 +93,12 @@ measuring a workload that benefits from parallel workers.
 
 Configuration is divided by responsibility:
 
-| Kind | Examples | Storage |
-| --- | --- | --- |
-| Non-secret config | base URLs, retry budgets, certification profile | environment variables or versioned config |
-| Runtime secrets | database password, n8n encryption key | deployment secret manager |
-| n8n credentials | partner OAuth client and access credentials | n8n credential store, encrypted with a stable key |
-| Test-only credentials | simulator API and fault-control tokens | isolated preview/local secrets |
+| Kind                  | Examples                                        | Storage                                           |
+| --------------------- | ----------------------------------------------- | ------------------------------------------------- |
+| Non-secret config     | base URLs, retry budgets, certification profile | environment variables or versioned config         |
+| Runtime secrets       | database password, n8n encryption key           | deployment secret manager                         |
+| n8n credentials       | partner OAuth client and access credentials     | n8n credential store, encrypted with a stable key |
+| Test-only credentials | simulator API and fault-control tokens          | isolated preview/local secrets                    |
 
 Secrets are never committed, written into workflow exports, or copied into test
 fixtures. The n8n encryption key must remain stable across restarts and workers;
@@ -139,4 +139,3 @@ container alone is not considered a successful deployment.
   previous and new image can coexist during rollout.
 - Certification runs are idempotent and have unique run IDs, so a deployment
   retry does not merge evidence from separate attempts.
-

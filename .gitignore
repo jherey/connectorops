@@ -1,0 +1,12 @@
+.DS_Store
+.cache/
+.env
+.npm-cache/
+artifacts/
+apps/*/dist-bundle/
+coverage/
+dist/
+docker/acme-api/artifacts/*.tgz
+docker/n8n/artifacts/*.tgz
+node_modules/
+*.log

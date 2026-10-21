@@ -1,0 +1,56 @@
+{
+	"name": "n8n-nodes-acmecrm",
+	"version": "0.1.0",
+	"description": "Production-minded AcmeCRM nodes for ConnectorOps certification scenarios",
+	"homepage": "https://github.com/jherey/connectorops#readme",
+	"license": "MIT",
+	"keywords": [
+		"n8n-community-node-package",
+		"n8n",
+		"connector",
+		"reliability"
+	],
+	"author": {
+		"name": "jherey",
+		"email": "jherey@users.noreply.github.com"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/jherey/connectorops.git",
+		"directory": "packages/n8n-nodes-acmecrm"
+	},
+	"scripts": {
+		"build": "n8n-node build",
+		"build:watch": "tsc --watch",
+		"dev": "n8n-node dev",
+		"lint": "n8n-node lint",
+		"lint:fix": "n8n-node lint --fix",
+		"test": "vitest run",
+		"typecheck": "tsc --noEmit"
+	},
+	"files": [
+		"dist"
+	],
+	"n8n": {
+		"n8nNodesApiVersion": 1,
+		"strict": true,
+		"credentials": [
+			"dist/credentials/AcmeCrmApi.credentials.js"
+		],
+		"nodes": [
+			"dist/nodes/AcmeCrm/AcmeCrm.node.js"
+		]
+	},
+	"devDependencies": {
+		"@n8n/node-cli": "0.54.1",
+		"@types/node": "24.19.2",
+		"eslint": "9.39.5",
+		"n8n-workflow": "2.16.0",
+		"prettier": "3.9.10",
+		"typescript": "5.9.3",
+		"vitest": "5.0.5"
+	},
+	"peerDependencies": {
+		"n8n-workflow": "*"
+	}
+}

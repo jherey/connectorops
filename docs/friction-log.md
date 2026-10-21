@@ -79,7 +79,80 @@ payloads in an entry.
 
 ## Addressed friction
 
-No entries have been addressed yet.
+### F-003: The default npm cache directory was unavailable in the cloud image
+
+- **Observed:** 2026-10-22
+- **Resolved:** 2026-10-22
+- **Context:** Querying package metadata before creating the workspace lockfile
+- **Friction:** npm could not create `/home/agent/.npm/_cacache` because the
+  expected parent cache directory was absent in the cloud environment.
+- **Evidence:** npm returned `ENOENT` for `/home/agent/.npm/_cacache` before
+  making the registry request useful.
+- **Impact:** Package discovery and installation commands failed before project
+  code could be validated.
+- **Resolution:** `.npmrc` now uses an ignored repository-local cache. A clean
+  `npm ci` installed 657 packages successfully without an environment override.
+- **Status:** Addressed
+
+### F-004: Docker expected a writable home-directory configuration
+
+- **Observed:** 2026-10-22
+- **Resolved:** 2026-10-22
+- **Context:** Building the AcmeCRM simulator image in the cloud environment
+- **Friction:** Docker Buildx tried to create `/home/agent/.docker/buildx`, but
+  the cloud filesystem exposes that location as read-only.
+- **Evidence:** `docker compose build acme-api` failed with
+  `mkdir /home/agent/.docker/buildx: read-only file system`.
+- **Impact:** Container builds failed before reading the project Dockerfile.
+- **Resolution:** Project Compose commands now run through
+  `scripts/compose.mjs`, which preserves an explicit `DOCKER_CONFIG` and
+  otherwise creates an ignored repository-local configuration directory.
+- **Status:** Addressed
+
+### F-005: The primary n8n container registry was unavailable from cloud builds
+
+- **Observed:** 2026-10-22
+- **Resolved:** 2026-10-22
+- **Context:** Building the pinned custom n8n image
+- **Friction:** The environment denied manifest access to the primary
+  `docker.n8n.io` registry before the Dockerfile could run.
+- **Evidence:** BuildKit returned `Forbidden` for the pinned `2.44.5` manifest.
+- **Impact:** The reproducible n8n image could not be built from the primary
+  registry in this cloud environment.
+- **Resolution:** The Dockerfile uses n8n's official Docker Hub image mirror,
+  `n8nio/n8n:2.44.5`, while retaining the exact version pin.
+- **Status:** Addressed
+
+### F-006: Generated executable files lost their executable bit
+
+- **Observed:** 2026-10-22
+- **Resolved:** 2026-10-22
+- **Context:** Starting Postgres with the repository-provided database
+  initialization script
+- **Friction:** The generated shell script was mounted with mode `0600`, so the
+  Postgres entrypoint skipped it instead of creating the simulator database.
+- **Evidence:** The first Compose startup did not create the `acmecrm` database;
+  `stat` showed that `docker/postgres/init-databases.sh` was not executable.
+- **Impact:** The simulator could not become ready on a clean environment.
+- **Resolution:** The script is checked in with executable mode and clean-volume
+  startup now creates both databases successfully.
+- **Status:** Addressed
+
+### F-007: Container builds could not reach the npm registry
+
+- **Observed:** 2026-10-22
+- **Resolved:** 2026-10-22
+- **Context:** Building the AcmeCRM simulator and custom n8n images
+- **Friction:** Docker build containers could not resolve the npm registry, even
+  though dependency installation worked from the host environment.
+- **Evidence:** In-container `npm ci` stalled and failed while resolving registry
+  packages; the same lockfile completed with host `npm ci`.
+- **Impact:** A conventional multi-stage Docker build was not reproducible in
+  this cloud environment.
+- **Resolution:** Host-side packing creates deterministic ignored artifacts. The
+  AcmeCRM simulator is bundled into a standalone server, and both images install
+  or copy only those packed artifacts without registry access.
+- **Status:** Addressed
 
 ## Review cadence
 

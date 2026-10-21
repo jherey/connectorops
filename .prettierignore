@@ -1,0 +1,7 @@
+.npm-cache
+apps/*/dist-bundle
+coverage
+dist
+docker/n8n/artifacts
+node_modules
+package-lock.json
