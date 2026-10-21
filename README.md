@@ -1,139 +1,144 @@
 # ConnectorOps
 
-> Enterprise readiness, resilience testing, and continuous certification for
-> n8n connectors.
+> A release gate that proves an n8n connector is safe when the partner API is
+> not.
 
-ConnectorOps is a driving test for software integrations. It exercises an n8n
-connector against realistic partner API failures—expired credentials, rate
-limits, duplicate webhooks, slow responses, pagination, and contract drift—and
-produces evidence showing whether the connector is safe to release.
+Happy-path demos do not answer the enterprise question: what happens when a
+write succeeds remotely but its response never arrives? ConnectorOps turns
+that boundary failure into a repeatable certification test with an auditable
+`CERTIFIED`, `BLOCKED`, or `INCOMPLETE` decision.
 
-The project is designed around a simple belief:
-
-> An enterprise connector is not production-ready when its happy path works. It
-> is ready when failures are predictable, observable, and recoverable.
-
-## The use case
-
-Imagine a team preparing an n8n connector for a fictional enterprise platform,
-AcmeCRM. Creating a customer successfully proves the happy path, but it does not
-answer the questions an enterprise customer or technology partner will ask:
-
-- What happens when an OAuth token expires during a long-running job?
-- Does the connector respect the partner's rate-limit instructions?
-- Can duplicate webhooks create duplicate orders?
-- Can it traverse a large paginated dataset without losing records?
-- Does a breaking API change fail clearly before reaching customers?
-- Do logs and reports avoid exposing credentials and customer data?
-
-ConnectorOps runs these scenarios, records the observed behavior, and produces
-a readiness scorecard. A failed requirement blocks certification and includes
-enough evidence for an engineer, product manager, and external partner to make
-the next decision together.
-
-Read the full [product use case](docs/product-use-case.md).
-
-## Demonstration
-
-The initial demonstration follows one connector through a release decision:
-
-1. Run the certification workflow against the AcmeCRM simulator.
-2. Verify authentication, pagination, webhook, and bulk-operation behavior.
-3. Inject a burst of `429` responses and a breaking response-schema change.
-4. Confirm that the connector honors `Retry-After` while the contract test
-   catches the incompatible response.
-5. Block certification and generate an evidence bundle for the owning engineer
-   and partner.
-6. Apply an approved compatibility mapping and rerun certification.
-7. Issue a passing scorecard only when the release criteria are satisfied.
-
-Example output:
+The reference integration is a custom AcmeCRM n8n node. Its simulator commits
+an order and delays the response beyond the client timeout. The safe connector
+retries with the same idempotency key and produces one order. A deliberately
+unsafe control retries without a key, produces two orders, and is blocked.
 
 ```text
-Authentication refresh             PASS
-Cursor pagination                  PASS
-Rate-limit handling                PASS
-Duplicate webhook protection       FAIL
-Sensitive-data logging             PASS
-Schema compatibility               FAIL
+                         first response is lost
+ n8n workflow ──create──▶ AcmeCRM simulator ──commit──▶ order
+      │                         ▲
+      └──same key, retry────────┘
 
-Certification: BLOCKED
+ observed: 2 requests · 1 order · CERTIFIED
+ control:  2 requests · 2 orders · BLOCKED
 ```
 
-## Proposed system
+That negative control matters: it proves the harness can detect the defect it
+claims to prevent, rather than merely generating a green report.
 
-```text
-                         +-----------------------+
-                         | AcmeCRM API simulator |
-                         | faults + captured I/O |
-                         +-----------+-----------+
-                                     ^
-                                     |
-+-------------------+      +---------+----------+      +------------------+
-| Scenario catalog  +----->+ n8n certification +----->+ Evidence + score |
-| and release rules |      | workflows + node   |      | and release gate |
-+-------------------+      +---------+----------+      +------------------+
-                                     |
-                                     v
-                         +-----------+-----------+
-                         | PostgreSQL state      |
-                         | runs + assertions     |
-                         +-----------------------+
+## What is implemented
+
+- A pinned Node.js 24/npm 11 workspace and n8n `2.44.5` deployment topology
+- A TypeScript AcmeCRM simulator with memory and PostgreSQL stores
+- Atomic idempotency replay and sanitized, hashed request evidence
+- Deterministic `timeout-after-commit` and `rate-limit-then-success` faults
+- A real custom n8n node with stable keys, bounded retry, `Retry-After`
+  handling, nested-error normalization, and secret-safe errors
+- A version-controlled n8n workflow exercised through n8n's real runtime
+- A certification engine with explicit `PASS`, `FAIL`, `ERROR`, and `NOT_RUN`
+  assertions; required failures cannot be averaged away
+- Generated safe and negative-control evidence, CI, architecture decisions,
+  deployment guidance, and a friction log
+
+The narrowness is deliberate. Authentication refresh, pagination, webhooks,
+async jobs, and contract drift remain roadmap scenarios; they are not presented
+as completed work.
+
+## Proven journeys
+
+| Scenario                  | Required behavior                     | Evidence                                          | Decision    |
+| ------------------------- | ------------------------------------- | ------------------------------------------------- | ----------- |
+| Timeout after commit      | Retry with one stable key; one order  | `created → replayed`, two requests, one order     | `CERTIFIED` |
+| Unsafe timeout control    | Detect duplicate partner effects      | two requests, two orders                          | `BLOCKED`   |
+| Rate limit                | Honor `Retry-After: 0`; reuse one key | `rate_limited → created`, two requests, one order | `CERTIFIED` |
+| Unsafe rate-limit control | Reject missing stable-key evidence    | two null key hashes                               | `BLOCKED`   |
+
+See the generated [certified scorecard](docs/examples/certified-scorecard.json),
+[blocked scorecard](docs/examples/blocked-scorecard.json), and
+[partner-facing failure report](docs/examples/partner-failure-report.md).
+
+## Architecture
+
+```mermaid
+flowchart LR
+    W[Versioned n8n workflow] --> N[AcmeCRM custom node]
+    N --> S[Fault-controlled simulator]
+    S --> P[(PostgreSQL)]
+    C[Certification engine] --> S
+    S --> E[Sanitized observations]
+    E --> C
+    C --> G{Deterministic gate}
+    G -->|all required pass| OK[CERTIFIED]
+    G -->|required fail| NO[BLOCKED]
+    G -->|error or not run| INC[INCOMPLETE]
 ```
 
-The first version intentionally contains one realistic connector rather than
-many shallow integrations:
+n8n makes the connector invocation visible. TypeScript owns partner-protocol
+correctness and the deterministic policy. The current workflow is intentionally
+small (`Manual Trigger → AcmeCRM Safe Retry`); scenario setup and evidence
+verification are performed by the execution harness. Moving the full journey
+onto the canvas is a documented next increment, not a hidden claim.
 
-- A TypeScript AcmeCRM API simulator with controllable failure modes
-- A custom n8n community node with credentials and representative operations
-- Certification, webhook, failure-triage, and contract-canary workflows
-- PostgreSQL-backed certification state and evidence
-- Unit, integration, and a small number of end-to-end journey tests
-- A deterministic release decision; optional AI may explain contract changes,
-  but it cannot override the gate
+The decisions behind those boundaries are in [docs/decisions](docs/decisions),
+and the ownership and delivery model is in the
+[engineering delivery plan](docs/engineering-delivery-plan.md).
 
-## Deployment
+## Run it
 
-Local development and CI run the entire system in containers. A public demo
-uses the same images with managed PostgreSQL. A production-shaped reference
-deployment can separate n8n's main process from queue workers and add Redis
-when workload measurements justify it.
-
-See [deployment](docs/deployment.md) for the environments, component topology,
-security boundaries, health checks, and release flow.
-
-## Engineering approach
-
-ConnectorOps borrows several ideas from
-[Epicflare](https://github.com/epicweb-dev/epicflare): one obvious development
-command, local third-party simulators, isolated preview environments,
-high-signal journey tests, explicit architecture documentation, and deployment
-health checks tied to the exact revision being released.
-
-See [engineering principles](docs/engineering-principles.md) for what we are
-adopting, what we are adapting, and what we are deliberately not copying.
-
-We record slow starts, broken commands, unclear behavior, and missing guidance
-in the [friction log](docs/friction-log.md). The log captures observed problems
-before we decide whether the right response is documentation, automation, a
-test, or a product change.
-
-## Project status
-
-ConnectorOps is currently in product-definition and architecture planning. The
-next milestone is a thin vertical slice: create one customer through the custom
-node, certify its timeout and duplicate-delivery behavior, and produce the first
-readiness report.
-
-## Local development
-
-ConnectorOps uses Node.js 24, npm workspaces, and Docker Compose. Once the custom
-node package is present, the full local topology starts with:
+Prerequisites: Node.js 24, npm 11, and Docker with Compose.
 
 ```bash
 npm ci
-npm run dev
+npm run validate
+npm run test:integration
 ```
 
-See [getting started](docs/getting-started.md) for prerequisites, focused
-development commands, readiness verification, and safe teardown.
+For the containerized n8n journey:
+
+```bash
+npm run dev
+# Complete the one-time n8n owner setup in the UI, then in another terminal:
+ACME_API_KEY='<local partner key>' npm run workflow:bootstrap
+ACME_CONTROL_TOKEN='<local control token>' npm run workflow:execute
+```
+
+The execution succeeds only when real n8n produces two partner requests with
+`created → replayed`, one stable key hash, and one committed order. Stop without
+deleting database volumes using `npm run down`.
+
+Generate fresh application evidence from executable scenarios:
+
+```bash
+npm run evidence:generate
+```
+
+The complete setup, readiness checks, and focused commands are in
+[getting started](docs/getting-started.md). Deployment shapes and security
+boundaries are in [deployment](docs/deployment.md).
+
+## Product and engineering judgment
+
+ConnectorOps is an operating model, not a test dashboard. A partner contract,
+a controlled simulator, connector behavior, observation evidence, and release
+policy have explicit interfaces and owners. AI may summarize sanitized evidence
+later, but it cannot change an assertion or release decision.
+
+The design borrows useful principles from
+[Epicflare](https://github.com/epicweb-dev/epicflare): one obvious development
+path, local substitutes for external services, immutable artifacts, revision
+health, focused journey tests, and architecture documentation. The exact
+adoptions and deliberate differences are recorded in
+[engineering principles](docs/engineering-principles.md).
+
+Development friction is treated as product evidence. Slow starts, broken
+scripts, environment constraints, and missing docs are recorded with their
+impact and resolution in the [friction log](docs/friction-log.md).
+
+## Application walkthrough
+
+Use the [three-minute demo script](docs/demo-script.md). It shows the real n8n
+safe path, then the executable unsafe control and its blocked evidence. It does
+not require a bespoke dashboard or a fabricated screenshot.
+
+For the broader user problem, readiness model, and roadmap, see the
+[product use case](docs/product-use-case.md).

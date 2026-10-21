@@ -1,0 +1,124 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-10-21T23:37:32.380Z",
+  "run": {
+    "id": "example-unsafe-timeout",
+    "profileId": "acme-order-v1",
+    "connectorVersion": "0.1.0",
+    "gitSha": "application-package-example",
+    "startedAt": "2026-10-21T23:37:32.352Z",
+    "completedAt": "2026-10-21T23:37:32.380Z"
+  },
+  "scenario": {
+    "id": "timeout-after-commit",
+    "operation": "order.create",
+    "externalReference": "ORDER-123",
+    "clientMode": "negative-control"
+  },
+  "observations": {
+    "clientAttempts": 2,
+    "firstAttemptTimedOut": true,
+    "rateLimitObserved": false,
+    "retryAfterSeconds": null,
+    "terminalHttpStatus": 201,
+    "partnerRequests": 2,
+    "committedOrders": 2
+  },
+  "assertions": [
+    {
+      "id": "run-configured",
+      "required": true,
+      "status": "PASS",
+      "expected": {
+        "configured": true
+      },
+      "actual": {
+        "configured": true
+      },
+      "evidenceRefs": [
+        "request:aa2fdc72-5392-4550-bcad-57a59451e834",
+        "request:1be4d031-213f-4b2b-b2f8-47e3e5022aaa",
+        "order:e4200c98-a56e-43ea-8363-8821613bd59a",
+        "order:b0793677-7db4-4ba1-8a03-c33b699fe945"
+      ]
+    },
+    {
+      "id": "timeout-observed",
+      "required": true,
+      "status": "PASS",
+      "expected": true,
+      "actual": true,
+      "evidenceRefs": [
+        "request:aa2fdc72-5392-4550-bcad-57a59451e834",
+        "request:1be4d031-213f-4b2b-b2f8-47e3e5022aaa",
+        "order:e4200c98-a56e-43ea-8363-8821613bd59a",
+        "order:b0793677-7db4-4ba1-8a03-c33b699fe945"
+      ]
+    },
+    {
+      "id": "terminal-response",
+      "required": true,
+      "status": "PASS",
+      "expected": {
+        "successfulResponse": true
+      },
+      "actual": {
+        "statusCode": 201
+      },
+      "evidenceRefs": [
+        "request:aa2fdc72-5392-4550-bcad-57a59451e834",
+        "request:1be4d031-213f-4b2b-b2f8-47e3e5022aaa",
+        "order:e4200c98-a56e-43ea-8363-8821613bd59a",
+        "order:b0793677-7db4-4ba1-8a03-c33b699fe945"
+      ]
+    },
+    {
+      "id": "two-attempts-recorded",
+      "required": true,
+      "status": "PASS",
+      "expected": {
+        "clientAttempts": 2,
+        "partnerRequests": 2
+      },
+      "actual": {
+        "clientAttempts": 2,
+        "partnerRequests": 2
+      },
+      "evidenceRefs": [
+        "request:aa2fdc72-5392-4550-bcad-57a59451e834",
+        "request:1be4d031-213f-4b2b-b2f8-47e3e5022aaa",
+        "order:e4200c98-a56e-43ea-8363-8821613bd59a",
+        "order:b0793677-7db4-4ba1-8a03-c33b699fe945"
+      ]
+    },
+    {
+      "id": "exactly-once",
+      "required": true,
+      "status": "FAIL",
+      "expected": {
+        "committedOrders": 1
+      },
+      "actual": {
+        "committedOrders": 2
+      },
+      "evidenceRefs": [
+        "request:aa2fdc72-5392-4550-bcad-57a59451e834",
+        "request:1be4d031-213f-4b2b-b2f8-47e3e5022aaa",
+        "order:e4200c98-a56e-43ea-8363-8821613bd59a",
+        "order:b0793677-7db4-4ba1-8a03-c33b699fe945"
+      ]
+    }
+  ],
+  "evidenceRefs": [
+    "request:aa2fdc72-5392-4550-bcad-57a59451e834",
+    "request:1be4d031-213f-4b2b-b2f8-47e3e5022aaa",
+    "order:e4200c98-a56e-43ea-8363-8821613bd59a",
+    "order:b0793677-7db4-4ba1-8a03-c33b699fe945"
+  ],
+  "decision": {
+    "status": "BLOCKED",
+    "reasonCodes": [
+      "REQUIRED_FAIL:exactly-once"
+    ]
+  }
+}

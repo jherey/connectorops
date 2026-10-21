@@ -1,0 +1,116 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-10-21T23:37:32.352Z",
+  "run": {
+    "id": "example-safe-timeout",
+    "profileId": "acme-order-v1",
+    "connectorVersion": "0.1.0",
+    "gitSha": "application-package-example",
+    "startedAt": "2026-10-21T23:37:32.310Z",
+    "completedAt": "2026-10-21T23:37:32.352Z"
+  },
+  "scenario": {
+    "id": "timeout-after-commit",
+    "operation": "order.create",
+    "externalReference": "ORDER-123",
+    "clientMode": "safe"
+  },
+  "observations": {
+    "clientAttempts": 2,
+    "firstAttemptTimedOut": true,
+    "rateLimitObserved": false,
+    "retryAfterSeconds": null,
+    "terminalHttpStatus": 200,
+    "partnerRequests": 2,
+    "committedOrders": 1
+  },
+  "assertions": [
+    {
+      "id": "run-configured",
+      "required": true,
+      "status": "PASS",
+      "expected": {
+        "configured": true
+      },
+      "actual": {
+        "configured": true
+      },
+      "evidenceRefs": [
+        "request:191b3c23-9f6a-4136-85f5-8878107f97dc",
+        "request:ddb42033-39c9-464e-88a5-7c051f45df5c",
+        "order:39464a02-81fe-4ce5-96d7-1b5d9e77f1b0"
+      ]
+    },
+    {
+      "id": "timeout-observed",
+      "required": true,
+      "status": "PASS",
+      "expected": true,
+      "actual": true,
+      "evidenceRefs": [
+        "request:191b3c23-9f6a-4136-85f5-8878107f97dc",
+        "request:ddb42033-39c9-464e-88a5-7c051f45df5c",
+        "order:39464a02-81fe-4ce5-96d7-1b5d9e77f1b0"
+      ]
+    },
+    {
+      "id": "terminal-response",
+      "required": true,
+      "status": "PASS",
+      "expected": {
+        "successfulResponse": true
+      },
+      "actual": {
+        "statusCode": 200
+      },
+      "evidenceRefs": [
+        "request:191b3c23-9f6a-4136-85f5-8878107f97dc",
+        "request:ddb42033-39c9-464e-88a5-7c051f45df5c",
+        "order:39464a02-81fe-4ce5-96d7-1b5d9e77f1b0"
+      ]
+    },
+    {
+      "id": "two-attempts-recorded",
+      "required": true,
+      "status": "PASS",
+      "expected": {
+        "clientAttempts": 2,
+        "partnerRequests": 2
+      },
+      "actual": {
+        "clientAttempts": 2,
+        "partnerRequests": 2
+      },
+      "evidenceRefs": [
+        "request:191b3c23-9f6a-4136-85f5-8878107f97dc",
+        "request:ddb42033-39c9-464e-88a5-7c051f45df5c",
+        "order:39464a02-81fe-4ce5-96d7-1b5d9e77f1b0"
+      ]
+    },
+    {
+      "id": "exactly-once",
+      "required": true,
+      "status": "PASS",
+      "expected": {
+        "committedOrders": 1
+      },
+      "actual": {
+        "committedOrders": 1
+      },
+      "evidenceRefs": [
+        "request:191b3c23-9f6a-4136-85f5-8878107f97dc",
+        "request:ddb42033-39c9-464e-88a5-7c051f45df5c",
+        "order:39464a02-81fe-4ce5-96d7-1b5d9e77f1b0"
+      ]
+    }
+  ],
+  "evidenceRefs": [
+    "request:191b3c23-9f6a-4136-85f5-8878107f97dc",
+    "request:ddb42033-39c9-464e-88a5-7c051f45df5c",
+    "order:39464a02-81fe-4ce5-96d7-1b5d9e77f1b0"
+  ],
+  "decision": {
+    "status": "CERTIFIED",
+    "reasonCodes": []
+  }
+}
