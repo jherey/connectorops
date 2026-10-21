@@ -18,7 +18,9 @@ npm ci
 
 Copy `.env.example` to `.env` only when you need to override the local defaults.
 The committed example contains development-only values and is not suitable for
-a public deployment.
+a public deployment. `ACME_CONTROL_TOKEN` protects simulator fault controls,
+and `ACME_API_KEY` represents the partner credential exercised by the custom
+node. Replace both outside local development.
 
 ## Run the complete local topology
 
@@ -70,6 +72,17 @@ npm run validate
 The same command runs in CI and covers formatting, linting, type checking, unit
 tests, builds, and Compose configuration validation. Container startup and
 readiness run in a separate CI job because they are slower.
+
+Run the real Postgres-backed simulator integration test separately:
+
+```bash
+npm run test:integration
+```
+
+This command uses a dedicated Compose project to start only Postgres, discovers
+its loopback-only published port, runs the database test, and stops only the
+service it started. It does not disturb the development stack or delete either
+Postgres volume.
 
 ## Generated artifacts
 

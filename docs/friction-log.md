@@ -77,7 +77,70 @@ payloads in an entry.
   commit.
 - **Status:** Open
 
+### F-009: Certification tests import simulator source through a relative path
+
+- **Observed:** 2026-10-22
+- **Context:** Testing the certification engine against the in-memory AcmeCRM
+  simulator harness
+- **Friction:** The simulator has no formal test-harness export, so the
+  certification test reaches across workspace boundaries into application
+  source using `../../../apps/acme-api/src/...` imports.
+- **Evidence:** `packages/certification/test/certify.test.ts` imports `buildApp`
+  and `MemorySimulatorStore` directly from `apps/acme-api/src`.
+- **Impact:** Internal simulator file moves can break certification tests, and
+  the supported boundary between the application and certification packages is
+  unclear.
+- **Workaround:** Keep the relative import test-only; production certification
+  code does not depend on AcmeCRM simulator internals.
+- **Next action:** Define a stable test-harness export, either from
+  `@connectorops/acme-api` or a dedicated test-support workspace, before more
+  certification suites reuse these helpers.
+- **Status:** Open
+
 ## Addressed friction
+
+### F-012: n8n wraps transport error codes in `NodeApiError.cause`
+
+- **Observed:** 2026-10-22
+- **Context:** Executing the timeout-after-commit workflow with n8n 2.44.5
+- **Friction:** The simulator committed the order and the 100 ms client timeout
+  fired, but the connector did not retry because it inspected only the wrapper
+  error while `ECONNABORTED` was stored on its nested cause.
+- **Evidence:** The first live workflow run recorded one `created` request and
+  one order, then ended with the connector's sanitized exhausted-policy error.
+- **Resolution:** Traverse the error cause chain without cycles when reading
+  transport codes; add direct Axios and n8n-wrapped timeout regression tests.
+- **Status:** Addressed
+
+### F-011: The custom-node pack command could archive stale build output
+
+- **Observed:** 2026-10-22
+- **Context:** Repacking the connector after fixing timeout classification
+- **Friction:** Source tests passed, but the installed tarball still contained
+  the previous compiled JavaScript because `node:pack` did not build first.
+- **Evidence:** The source and package timestamps changed while
+  `dist/nodes/AcmeCrm/create-order.js` did not contain the new timeout code.
+- **Resolution:** Make `scripts/pack-n8n-node.mjs` run the node build before
+  every pack, so an immutable artifact cannot silently lag its source.
+- **Status:** Addressed
+
+### F-010: Cloud Docker exhausted root inodes with the VFS storage driver
+
+- **Observed:** 2026-10-22
+- **Context:** Rebuilding and recreating the local Compose stack in the cloud
+- **Friction:** The root filesystem had free bytes but no free inodes. Docker's
+  VFS driver deep-copied the large n8n image and failed while creating container
+  init layers with `no space left on device`.
+- **Evidence:** `df -i /workspace` reached 100%, while `/tmp` retained over four
+  million free inodes. The immutable images built successfully; container
+  creation failed during the layer copy.
+- **Workaround:** Validate the same pinned n8n package and packed community node
+  from `/tmp`, with Postgres in Docker and the simulator in the same bounded
+  validation process. Standard Docker hosts continue to use Compose.
+- **Next action:** Give the cloud Docker data root a filesystem with a larger
+  inode budget or a copy-on-write storage driver before requiring Compose E2E
+  on this runner.
+- **Status:** Open (environment constraint)
 
 ### F-003: The default npm cache directory was unavailable in the cloud image
 
@@ -152,6 +215,24 @@ payloads in an entry.
 - **Resolution:** Host-side packing creates deterministic ignored artifacts. The
   AcmeCRM simulator is bundled into a standalone server, and both images install
   or copy only those packed artifacts without registry access.
+- **Status:** Addressed
+
+### F-008: Integration tests collided with the development Compose project
+
+- **Observed:** 2026-10-22
+- **Resolved:** 2026-10-22
+- **Context:** Running the real Postgres simulator-store integration test while
+  another development task had Postgres running
+- **Friction:** The existing container predated the loopback port mapping, so
+  Compose reported `:0` and the test constructed an invalid database URL.
+- **Evidence:** The first `npm run test:integration` failed with `Invalid URL`;
+  `docker compose port postgres 5432` returned `:0` for the existing container.
+- **Impact:** Integration tests could either fail unpredictably or disturb a
+  developer's running stack by recreating its database container.
+- **Resolution:** The integration runner uses a dedicated Compose project,
+  discovers its dynamic loopback port, ensures the simulator database exists,
+  and removes only the container it started while preserving volumes. Two
+  consecutive runs passed without changing the development Postgres service.
 - **Status:** Addressed
 
 ## Review cadence

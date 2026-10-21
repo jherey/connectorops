@@ -7,6 +7,16 @@ const outputDirectory = resolve(projectRoot, 'docker/n8n/artifacts')
 const npmCommand = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 mkdirSync(outputDirectory, { recursive: true })
 
+const buildResult = spawnSync(
+	npmCommand,
+	['run', 'build', '--workspace', 'n8n-nodes-acmecrm'],
+	{ cwd: projectRoot, encoding: 'utf8', stdio: 'inherit' },
+)
+
+if (buildResult.status !== 0) {
+	process.exit(buildResult.status ?? 1)
+}
+
 const result = spawnSync(
 	npmCommand,
 	[

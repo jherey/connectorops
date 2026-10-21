@@ -1,0 +1,28 @@
+{
+	"name": "@connectorops/certification",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Deterministic connector certification engine and negative-control harness",
+	"type": "module",
+	"files": [
+		"dist"
+	],
+	"bin": {
+		"connectorops-certify": "dist/cli.js"
+	},
+	"engines": {
+		"node": ">=24 <25",
+		"npm": ">=11 <12"
+	},
+	"scripts": {
+		"build": "tsc -p tsconfig.json",
+		"lint": "eslint src test",
+		"test": "vitest run",
+		"test:unit": "npm test",
+		"typecheck": "tsc -p tsconfig.json --noEmit"
+	},
+	"devDependencies": {
+		"@types/node": "24.19.2",
+		"typescript": "5.9.3"
+	}
+}
