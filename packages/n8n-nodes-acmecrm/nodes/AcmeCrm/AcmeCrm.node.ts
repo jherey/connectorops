@@ -7,8 +7,7 @@ import type {
 	JsonObject,
 } from 'n8n-workflow';
 import { NodeApiError, NodeConnectionTypes, NodeOperationError, sleep } from 'n8n-workflow';
-import { createOrderIdempotencyKey } from './idempotency';
-import { retryRequest, type RetryDecision } from './retry';
+import { createOrder, type CreateOrderRequest, type SanitizedRequestFailure } from './create-order';
 
 type CreateOrderResponse = JsonObject & {
 	id: string;
@@ -125,35 +124,13 @@ export class AcmeCrm implements INodeType {
 					this.getNodeParameter('currency', itemIndex),
 					itemIndex,
 				);
-				const idempotencyKey = createOrderIdempotencyKey(externalOrderId);
-
-				const response = await retryRequest<CreateOrderResponse>({
-					request: async () => {
-						const request: IHttpRequestOptions = {
-							method: 'POST',
-							url: `${baseUrl}/v1/orders`,
-							headers: {
-								'Idempotency-Key': idempotencyKey,
-							},
-							body: {
-								externalOrderId,
-								customerId,
-								amountMinor,
-								currency,
-							},
-							json: true,
-						};
-
-						return (await this.helpers.httpRequestWithAuthentication.call(
-							this,
-							'acmeCrmApi',
-							request,
-						)) as CreateOrderResponse;
-					},
-					classifyError: classifyHttpError,
+				const response = await createOrder<CreateOrderResponse>({
+					baseUrl,
+					input: { externalOrderId, customerId, amountMinor, currency },
+					transport: async (request) => await executeRequest.call(this, request),
 					sleep,
-					onGiveUp: (error) => {
-						throw createHttpNodeError(this, error, itemIndex);
+					onFailure: (failure) => {
+						throw createHttpNodeError(this, failure, itemIndex);
 					},
 				});
 
@@ -232,68 +209,37 @@ function requireCurrency(context: IExecuteFunctions, value: unknown, itemIndex: 
 	return value.trim().toUpperCase();
 }
 
-function classifyHttpError(error: unknown): RetryDecision {
-	const statusCode = readStatusCode(error);
-	return {
-		retryable:
-			statusCode === 429 ||
-			(statusCode !== undefined && statusCode >= 500) ||
-			(statusCode === undefined && isRetryableNetworkError(error)),
-		retryAfter: readRetryAfter(error),
-	};
-}
-
-function isRetryableNetworkError(error: unknown): boolean {
-	if (!isRecord(error)) return false;
-	const code = typeof error.code === 'string' ? error.code.toUpperCase() : '';
-	return ['ECONNRESET', 'ETIMEDOUT', 'ESOCKETTIMEDOUT', 'UND_ERR_HEADERS_TIMEOUT'].includes(code);
-}
-
 function createHttpNodeError(
 	context: IExecuteFunctions,
-	error: unknown,
+	failure: SanitizedRequestFailure,
 	itemIndex: number,
 ): NodeApiError {
-	const statusCode = readStatusCode(error);
 	const errorResponse: JsonObject = {
-		message: 'AcmeCRM request failed',
-		description:
-			statusCode === undefined
-				? 'The AcmeCRM request failed after the bounded retry policy was exhausted.'
-				: `AcmeCRM returned HTTP ${statusCode} after the bounded retry policy was exhausted.`,
+		message: failure.message,
+		description: failure.description,
 	};
 	return new NodeApiError(context.getNode(), errorResponse, {
 		itemIndex,
-		httpCode: statusCode === undefined ? undefined : String(statusCode),
+		httpCode: failure.statusCode === undefined ? undefined : String(failure.statusCode),
 	});
 }
 
-function readStatusCode(error: unknown): number | undefined {
-	if (!isRecord(error)) return undefined;
-	if (typeof error.statusCode === 'number') return error.statusCode;
-	if (typeof error.httpCode === 'number') return error.httpCode;
-	if (typeof error.httpCode === 'string') {
-		const parsed = Number.parseInt(error.httpCode, 10);
-		if (Number.isFinite(parsed)) return parsed;
-	}
-	if (isRecord(error.response) && typeof error.response.status === 'number') {
-		return error.response.status;
-	}
-	return undefined;
-}
-
-function readRetryAfter(error: unknown): string | undefined {
-	if (!isRecord(error) || !isRecord(error.response) || !isRecord(error.response.headers)) {
-		return undefined;
-	}
-	const retryAfter = error.response.headers['retry-after'];
-	if (typeof retryAfter === 'string') return retryAfter;
-	if (typeof retryAfter === 'number') return String(retryAfter);
-	return undefined;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null;
+async function executeRequest(
+	this: IExecuteFunctions,
+	request: CreateOrderRequest,
+): Promise<CreateOrderResponse> {
+	const options: IHttpRequestOptions = {
+		method: request.method,
+		url: request.url,
+		headers: request.headers,
+		body: request.body,
+		json: true,
+	};
+	return (await this.helpers.httpRequestWithAuthentication.call(
+		this,
+		'acmeCrmApi',
+		options,
+	)) as CreateOrderResponse;
 }
 
 function toNodeError(
@@ -302,12 +248,5 @@ function toNodeError(
 	itemIndex: number,
 ): NodeApiError | NodeOperationError {
 	if (error instanceof NodeApiError || error instanceof NodeOperationError) return error;
-	if (isRecord(error) && readStatusCode(error) !== undefined) {
-		return new NodeApiError(this.getNode(), error as unknown as JsonObject, { itemIndex });
-	}
-	return new NodeOperationError(
-		this.getNode(),
-		error instanceof Error ? error : 'AcmeCRM operation failed',
-		{ itemIndex },
-	);
+	return new NodeOperationError(this.getNode(), 'AcmeCRM operation failed', { itemIndex });
 }

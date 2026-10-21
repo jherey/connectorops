@@ -17,6 +17,8 @@ services:
       interval: 2s
       timeout: 5s
       retries: 15
+    ports:
+      - 127.0.0.1::5432
     restart: unless-stopped
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -27,6 +29,8 @@ services:
       context: .
       dockerfile: apps/acme-api/Dockerfile
     environment:
+      ACME_API_KEY: ${ACME_API_KEY:-connectorops-local-partner-key}
+      ACME_CONTROL_TOKEN: ${ACME_CONTROL_TOKEN:-connectorops-local-control-token}
       APP_COMMIT_SHA: ${APP_COMMIT_SHA:-development}
       DATABASE_URL: postgresql://${POSTGRES_USER:-connectorops}:${POSTGRES_PASSWORD:-connectorops-local-only}@postgres:5432/acmecrm
       HOST: 0.0.0.0

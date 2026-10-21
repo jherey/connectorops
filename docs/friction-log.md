@@ -154,6 +154,24 @@ payloads in an entry.
   or copy only those packed artifacts without registry access.
 - **Status:** Addressed
 
+### F-008: Integration tests collided with the development Compose project
+
+- **Observed:** 2026-10-22
+- **Resolved:** 2026-10-22
+- **Context:** Running the real Postgres simulator-store integration test while
+  another development task had Postgres running
+- **Friction:** The existing container predated the loopback port mapping, so
+  Compose reported `:0` and the test constructed an invalid database URL.
+- **Evidence:** The first `npm run test:integration` failed with `Invalid URL`;
+  `docker compose port postgres 5432` returned `:0` for the existing container.
+- **Impact:** Integration tests could either fail unpredictably or disturb a
+  developer's running stack by recreating its database container.
+- **Resolution:** The integration runner uses a dedicated Compose project,
+  discovers its dynamic loopback port, ensures the simulator database exists,
+  and removes only the container it started while preserving volumes. Two
+  consecutive runs passed without changing the development Postgres service.
+- **Status:** Addressed
+
 ## Review cadence
 
 Review open entries at milestone boundaries. When an entry is addressed:

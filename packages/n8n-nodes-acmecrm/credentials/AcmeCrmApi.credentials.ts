@@ -26,12 +26,13 @@ export class AcmeCrmApi implements ICredentialType {
 			description: 'Base URL of the AcmeCRM API or ConnectorOps simulator',
 		},
 		{
-			displayName: 'API Token',
+			displayName: 'API Key',
 			name: 'apiToken',
 			type: 'string',
 			typeOptions: { password: true },
 			default: '',
 			required: true,
+			description: 'API key sent to AcmeCRM business endpoints',
 		},
 	];
 
@@ -39,7 +40,7 @@ export class AcmeCrmApi implements ICredentialType {
 		type: 'generic',
 		properties: {
 			headers: {
-				Authorization: '=Bearer {{$credentials.apiToken}}',
+				'X-API-Key': '={{$credentials.apiToken}}',
 			},
 		},
 	};

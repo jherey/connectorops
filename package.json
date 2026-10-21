@@ -28,6 +28,7 @@
 		"simulator:pack": "node scripts/pack-acme-api.mjs",
 		"smoke": "node scripts/smoke.mjs",
 		"test": "npm run test --workspaces --if-present",
+		"test:integration": "node scripts/test-integration.mjs",
 		"test:unit": "npm test",
 		"typecheck": "npm run typecheck --workspaces --if-present",
 		"validate": "npm run format:check && npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run compose:config"
