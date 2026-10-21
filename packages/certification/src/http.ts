@@ -12,6 +12,7 @@ export class HttpResponseError extends Error {
 	constructor(
 		readonly statusCode: number,
 		readonly responseBody: string,
+		readonly headers: Record<string, string | undefined>,
 	) {
 		super(`HTTP request failed with status ${statusCode}`)
 		this.name = 'HttpResponseError'
@@ -53,18 +54,19 @@ export function requestJson(
 				response.once('end', () => {
 					const responseBody = Buffer.concat(chunks).toString('utf8')
 					const statusCode = response.statusCode ?? 0
+					const headers = Object.fromEntries(
+						Object.entries(response.headers).map(([key, value]) => [
+							key,
+							Array.isArray(value) ? value.join(',') : value,
+						]),
+					)
 					if (statusCode < 200 || statusCode >= 300) {
-						reject(new HttpResponseError(statusCode, responseBody))
+						reject(new HttpResponseError(statusCode, responseBody, headers))
 						return
 					}
 					resolve({
 						statusCode,
-						headers: Object.fromEntries(
-							Object.entries(response.headers).map(([key, value]) => [
-								key,
-								Array.isArray(value) ? value.join(',') : value,
-							]),
-						),
+						headers,
 						body: responseBody ? JSON.parse(responseBody) : null,
 					})
 				})

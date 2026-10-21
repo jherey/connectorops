@@ -75,7 +75,10 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 					required: ['scenario'],
 					properties: {
 						runId: { type: 'string', pattern: runIdPattern },
-						scenario: { type: 'string', enum: ['timeout-after-commit'] },
+						scenario: {
+							type: 'string',
+							enum: ['timeout-after-commit', 'rate-limit-then-success'],
+						},
 						delayMs: { type: 'integer', minimum: 0, maximum: 60_000 },
 					},
 				},
@@ -189,6 +192,12 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 			}
 			if (result.kind === 'conflict') {
 				return reply.code(409).send({ error: 'idempotency_key_reused' })
+			}
+			if (result.kind === 'rate-limited') {
+				return reply
+					.header('retry-after', '0')
+					.code(429)
+					.send({ error: 'rate_limited' })
 			}
 
 			if (result.shouldDelay) {

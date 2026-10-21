@@ -99,6 +99,24 @@ payloads in an entry.
 
 ## Addressed friction
 
+### F-013: Non-success HTTP responses discarded retry guidance
+
+- **Observed:** 2026-10-22
+- **Resolved:** 2026-10-22
+- **Context:** Adding deterministic certification for partner rate limiting
+- **Friction:** The certification HTTP helper retained response headers only on
+  successful requests, so a `429` response's `Retry-After` instruction was not
+  available to the retry policy or the evidence report.
+- **Evidence:** The first rate-limit scenario could identify HTTP 429 but could
+  not distinguish a standards-compliant response from one without retry
+  guidance.
+- **Impact:** ConnectorOps could have certified a retry without proving that the
+  connector honored the partner contract.
+- **Resolution:** Non-success responses now carry normalized response headers;
+  the rate-limit profile requires `Retry-After: 0`, a stable idempotency-key
+  hash, the `rate_limited` to `created` sequence, and exactly one order.
+- **Status:** Addressed
+
 ### F-012: n8n wraps transport error codes in `NodeApiError.cause`
 
 - **Observed:** 2026-10-22

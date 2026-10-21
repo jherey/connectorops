@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 
 import { decide } from './decision.js'
-import { ClientTimeoutError, requestJson } from './http.js'
+import { ClientTimeoutError, HttpResponseError, requestJson } from './http.js'
 import type {
 	CertificationAssertion,
 	CertificationOptions,
@@ -22,6 +22,7 @@ export async function certify(
 	const startedAt = new Date().toISOString()
 	const runId = options.runId ?? `run_${randomUUID()}`
 	const mode = options.mode ?? 'safe'
+	const profile = options.profile ?? 'timeout-after-commit'
 	const order = options.order ?? defaultOrder
 	const baseUrl = options.baseUrl.replace(/\/$/, '')
 	const timeoutMs = options.requestTimeoutMs ?? 40
@@ -32,10 +33,30 @@ export async function certify(
 		await requestJson(`${baseUrl}/__control/runs`, {
 			method: 'POST',
 			headers: { authorization: `Bearer ${options.controlToken}` },
-			body: { runId, scenario: 'timeout-after-commit', delayMs },
+			body: {
+				runId,
+				scenario: profile,
+				...(profile === 'timeout-after-commit' ? { delayMs } : {}),
+			},
 			timeoutMs: retryTimeoutMs,
 		})
 	} catch (error) {
+		const pendingAssertionIds =
+			profile === 'timeout-after-commit'
+				? [
+						'timeout-observed',
+						'terminal-response',
+						'two-attempts-recorded',
+						'exactly-once',
+					]
+				: [
+						'rate-limit-observed',
+						'terminal-response',
+						'two-attempts-recorded',
+						'rate-limit-outcome-sequence',
+						'stable-idempotency-evidence',
+						'exactly-once',
+					]
 		const assertions: Array<CertificationAssertion> = [
 			{
 				id: 'run-configured',
@@ -46,12 +67,7 @@ export async function certify(
 				evidenceRefs: [],
 				message: errorMessage(error),
 			},
-			...[
-				'timeout-observed',
-				'terminal-response',
-				'two-attempts-recorded',
-				'exactly-once',
-			].map((id): CertificationAssertion => ({
+			...pendingAssertionIds.map((id): CertificationAssertion => ({
 				id,
 				required: true,
 				status: 'NOT_RUN',
@@ -64,11 +80,14 @@ export async function certify(
 			options,
 			runId,
 			mode,
+			profile,
 			externalReference: order.externalOrderId,
 			startedAt,
 			observations: {
 				clientAttempts: 0,
 				firstAttemptTimedOut: false,
+				rateLimitObserved: false,
+				retryAfterSeconds: null,
 				terminalHttpStatus: null,
 				partnerRequests: null,
 				committedOrders: null,
@@ -86,6 +105,8 @@ export async function certify(
 	}
 	let clientAttempts = 1
 	let firstAttemptTimedOut = false
+	let rateLimitObserved = false
+	let retryAfterSeconds: number | null = null
 	let terminalHttpStatus: number | null = null
 	let terminalError: string | null = null
 
@@ -98,9 +119,35 @@ export async function certify(
 		})
 		terminalHttpStatus = first.statusCode
 	} catch (error) {
-		if (error instanceof ClientTimeoutError) {
+		if (
+			profile === 'timeout-after-commit' &&
+			error instanceof ClientTimeoutError
+		) {
 			firstAttemptTimedOut = true
 			clientAttempts = 2
+			try {
+				const retry = await requestJson(orderUrl, {
+					method: 'POST',
+					headers: partnerHeaders,
+					body: order,
+					timeoutMs: retryTimeoutMs,
+				})
+				terminalHttpStatus = retry.statusCode
+			} catch (retryError) {
+				terminalError = errorMessage(retryError)
+			}
+		} else if (
+			profile === 'rate-limit-then-success' &&
+			error instanceof HttpResponseError &&
+			error.statusCode === 429
+		) {
+			rateLimitObserved = true
+			retryAfterSeconds = parseRetryAfter(error.headers['retry-after'])
+			clientAttempts = 2
+			if (retryAfterSeconds !== null) {
+				const retryDelayMs = retryAfterSeconds * 1_000
+				await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
+			}
 			try {
 				const retry = await requestJson(orderUrl, {
 					method: 'POST',
@@ -139,6 +186,9 @@ export async function certify(
 	const assertions = buildAssertions({
 		clientAttempts,
 		firstAttemptTimedOut,
+		rateLimitObserved,
+		retryAfterSeconds,
+		profile,
 		terminalHttpStatus,
 		terminalError,
 		evidence,
@@ -150,11 +200,14 @@ export async function certify(
 		options,
 		runId,
 		mode,
+		profile,
 		externalReference: order.externalOrderId,
 		startedAt,
 		observations: {
 			clientAttempts,
 			firstAttemptTimedOut,
+			rateLimitObserved,
+			retryAfterSeconds,
 			terminalHttpStatus,
 			partnerRequests: evidence?.requests.length ?? null,
 			committedOrders: evidence?.orders.length ?? null,
@@ -168,6 +221,7 @@ function createReport(input: {
 	options: CertificationOptions
 	runId: string
 	mode: NonNullable<CertificationOptions['mode']>
+	profile: NonNullable<CertificationOptions['profile']>
 	externalReference: string
 	startedAt: string
 	observations: CertificationReport['observations']
@@ -179,7 +233,10 @@ function createReport(input: {
 		generatedAt: new Date().toISOString(),
 		run: {
 			id: input.runId,
-			profileId: 'acme-order-v1',
+			profileId:
+				input.profile === 'timeout-after-commit'
+					? 'acme-order-v1'
+					: 'acme-order-rate-limit-v1',
 			connectorVersion: input.options.connectorVersion ?? 'development',
 			gitSha:
 				input.options.gitSha ?? process.env.APP_COMMIT_SHA ?? 'development',
@@ -187,7 +244,7 @@ function createReport(input: {
 			completedAt: new Date().toISOString(),
 		},
 		scenario: {
-			id: 'timeout-after-commit',
+			id: input.profile,
 			operation: 'order.create',
 			externalReference: input.externalReference,
 			clientMode: input.mode,
@@ -202,6 +259,9 @@ function createReport(input: {
 function buildAssertions(input: {
 	clientAttempts: number
 	firstAttemptTimedOut: boolean
+	rateLimitObserved: boolean
+	retryAfterSeconds: number | null
+	profile: NonNullable<CertificationOptions['profile']>
 	terminalHttpStatus: number | null
 	terminalError: string | null
 	evidence: PartnerEvidence | null
@@ -213,21 +273,13 @@ function buildAssertions(input: {
 		: input.evidence
 			? 'PASS'
 			: 'NOT_RUN'
-	return [
+	const shared: Array<CertificationAssertion> = [
 		{
 			id: 'run-configured',
 			required: true,
 			status: 'PASS',
 			expected: { configured: true },
 			actual: { configured: true },
-			evidenceRefs: input.evidenceRefs,
-		},
-		{
-			id: 'timeout-observed',
-			required: true,
-			status: input.firstAttemptTimedOut ? 'PASS' : 'FAIL',
-			expected: true,
-			actual: input.firstAttemptTimedOut,
 			evidenceRefs: input.evidenceRefs,
 		},
 		{
@@ -261,21 +313,93 @@ function buildAssertions(input: {
 			evidenceRefs: input.evidenceRefs,
 			...(input.evidenceError ? { message: input.evidenceError } : {}),
 		},
+	]
+
+	const exactlyOnce: CertificationAssertion = {
+		id: 'exactly-once',
+		required: true,
+		status:
+			evidenceStatus === 'PASS'
+				? input.evidence!.orders.length === 1
+					? 'PASS'
+					: 'FAIL'
+				: evidenceStatus,
+		expected: { committedOrders: 1 },
+		actual: { committedOrders: input.evidence?.orders.length ?? null },
+		evidenceRefs: input.evidenceRefs,
+		...(input.evidenceError ? { message: input.evidenceError } : {}),
+	}
+
+	if (input.profile === 'timeout-after-commit') {
+		shared.splice(1, 0, {
+			id: 'timeout-observed',
+			required: true,
+			status: input.firstAttemptTimedOut ? 'PASS' : 'FAIL',
+			expected: true,
+			actual: input.firstAttemptTimedOut,
+			evidenceRefs: input.evidenceRefs,
+		})
+		return [...shared, exactlyOnce]
+	}
+
+	const requests = input.evidence?.requests ?? []
+	const keyHashes = requests.map(({ idempotencyKeyHash }) => idempotencyKeyHash)
+	const stableKeyObserved =
+		keyHashes.length === 2 &&
+		keyHashes[0] !== null &&
+		keyHashes[0] === keyHashes[1]
+	const outcomeSequence = requests.map(({ outcome }) => outcome)
+	return [
+		shared[0]!,
 		{
-			id: 'exactly-once',
+			id: 'rate-limit-observed',
+			required: true,
+			status:
+				input.rateLimitObserved && input.retryAfterSeconds === 0
+					? 'PASS'
+					: 'FAIL',
+			expected: { statusCode: 429, retryAfterSeconds: 0 },
+			actual: {
+				observed: input.rateLimitObserved,
+				retryAfterSeconds: input.retryAfterSeconds,
+			},
+			evidenceRefs: input.evidenceRefs,
+		},
+		...shared.slice(1),
+		{
+			id: 'rate-limit-outcome-sequence',
 			required: true,
 			status:
 				evidenceStatus === 'PASS'
-					? input.evidence!.orders.length === 1
+					? outcomeSequence.join(',') === 'rate_limited,created'
 						? 'PASS'
 						: 'FAIL'
 					: evidenceStatus,
-			expected: { committedOrders: 1 },
-			actual: { committedOrders: input.evidence?.orders.length ?? null },
+			expected: ['rate_limited', 'created'],
+			actual: outcomeSequence,
 			evidenceRefs: input.evidenceRefs,
-			...(input.evidenceError ? { message: input.evidenceError } : {}),
 		},
+		{
+			id: 'stable-idempotency-evidence',
+			required: true,
+			status:
+				evidenceStatus === 'PASS'
+					? stableKeyObserved
+						? 'PASS'
+						: 'FAIL'
+					: evidenceStatus,
+			expected: { sameNonNullKeyHash: true },
+			actual: { sameNonNullKeyHash: stableKeyObserved },
+			evidenceRefs: input.evidenceRefs,
+		},
+		exactlyOnce,
 	]
+}
+
+function parseRetryAfter(value: string | undefined): number | null {
+	if (value === undefined || value.trim() === '') return null
+	const seconds = Number(value)
+	return Number.isFinite(seconds) && seconds >= 0 ? seconds : null
 }
 
 function errorMessage(error: unknown): string {

@@ -126,6 +126,56 @@ describe('run-scoped simulation', () => {
 		)
 	})
 
+	test('rate limits the first attempt without creating an order, then succeeds', async () => {
+		const app = createApp()
+		const createdRun = await app.inject({
+			method: 'POST',
+			url: '/__control/runs',
+			headers: { authorization: `Bearer ${controlToken}` },
+			payload: {
+				runId: 'rate-limit-run',
+				scenario: 'rate-limit-then-success',
+			},
+		})
+		expect(createdRun.statusCode).toBe(201)
+
+		const request = {
+			method: 'POST' as const,
+			url: '/runs/rate-limit-run/v1/orders',
+			headers: {
+				'x-api-key': partnerApiKey,
+				'idempotency-key': 'order:rate-limit-run:ORDER-123',
+			},
+			payload: order,
+		}
+		const first = await app.inject(request)
+		const second = await app.inject(request)
+
+		expect(first.statusCode).toBe(429)
+		expect(first.headers['retry-after']).toBe('0')
+		expect(first.json()).toEqual({ error: 'rate_limited' })
+		expect(second.statusCode).toBe(201)
+
+		const evidence = await app.inject({
+			method: 'GET',
+			url: '/__control/runs/rate-limit-run',
+			headers: { authorization: `Bearer ${controlToken}` },
+		})
+		expect(evidence.json().orders).toHaveLength(1)
+		expect(
+			evidence
+				.json()
+				.requests.map((entry: { outcome: string }) => entry.outcome),
+		).toEqual(['rate_limited', 'created'])
+		expect(
+			evidence
+				.json()
+				.requests.map((entry: { statusCode: number }) => entry.statusCode),
+		).toEqual([429, 201])
+		expect(evidence.json().requests[0].orderId).toBeNull()
+		expect(evidence.json().requests[1].orderId).toBe(second.json().id)
+	})
+
 	test('commits before a real client timeout and makes the retry replayable', async () => {
 		const app = createApp()
 		await app.listen({ host: '127.0.0.1', port: 0 })

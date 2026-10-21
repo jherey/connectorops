@@ -1,4 +1,6 @@
 export type ClientMode = 'safe' | 'negative-control'
+export type CertificationProfile =
+	'timeout-after-commit' | 'rate-limit-then-success'
 export type AssertionStatus = 'PASS' | 'FAIL' | 'ERROR' | 'NOT_RUN'
 export type DecisionStatus = 'CERTIFIED' | 'BLOCKED' | 'INCOMPLETE'
 
@@ -17,14 +19,14 @@ export type CertificationReport = {
 	generatedAt: string
 	run: {
 		id: string
-		profileId: 'acme-order-v1'
+		profileId: 'acme-order-v1' | 'acme-order-rate-limit-v1'
 		connectorVersion: string
 		gitSha: string
 		startedAt: string
 		completedAt: string
 	}
 	scenario: {
-		id: 'timeout-after-commit'
+		id: CertificationProfile
 		operation: 'order.create'
 		externalReference: string
 		clientMode: ClientMode
@@ -32,6 +34,8 @@ export type CertificationReport = {
 	observations: {
 		clientAttempts: number
 		firstAttemptTimedOut: boolean
+		rateLimitObserved: boolean
+		retryAfterSeconds: number | null
 		terminalHttpStatus: number | null
 		partnerRequests: number | null
 		committedOrders: number | null
@@ -49,6 +53,7 @@ export type CertificationOptions = {
 	controlToken: string
 	partnerApiKey: string
 	mode?: ClientMode
+	profile?: CertificationProfile
 	runId?: string
 	delayMs?: number
 	requestTimeoutMs?: number
@@ -66,7 +71,7 @@ export type CertificationOptions = {
 export type PartnerEvidence = {
 	run: {
 		runId: string
-		scenario: 'timeout-after-commit'
+		scenario: CertificationProfile
 		delayMs: number
 		faultTriggeredAt: string | null
 		createdAt: string
@@ -76,7 +81,7 @@ export type PartnerEvidence = {
 		id: string
 		idempotencyKeyHash: string | null
 		requestHash: string
-		outcome: 'created' | 'replayed' | 'conflict'
+		outcome: 'created' | 'replayed' | 'conflict' | 'rate_limited'
 		statusCode: number
 		orderId: string | null
 	}>

@@ -41,6 +41,9 @@ test('safe client retries with one stable key and certifies exactly-once behavio
 		requestTimeoutMs: 20,
 	})
 
+	expect(report.schemaVersion).toBe('1.0')
+	expect(report.run.profileId).toBe('acme-order-v1')
+	expect(report.scenario.id).toBe('timeout-after-commit')
 	expect(report.decision).toEqual({ status: 'CERTIFIED', reasonCodes: [] })
 	expect(report.observations).toMatchObject({
 		clientAttempts: 2,
@@ -84,6 +87,60 @@ test('unsafe negative control creates duplicates and produces an expected BLOCKE
 	})
 
 	// BLOCKED is the expected negative-control outcome, so this must not throw.
+	expect(() => assertExpectedDecision(report, 'BLOCKED')).not.toThrow()
+})
+
+test('safe client honors Retry-After with stable evidence and certifies one order', async () => {
+	const baseUrl = await startSimulator()
+	const report = await certify({
+		baseUrl,
+		controlToken,
+		partnerApiKey,
+		profile: 'rate-limit-then-success',
+		mode: 'safe',
+		runId: 'rate-limit-safe-run',
+	})
+
+	expect(report.schemaVersion).toBe('1.0')
+	expect(report.run.profileId).toBe('acme-order-rate-limit-v1')
+	expect(report.scenario.id).toBe('rate-limit-then-success')
+	expect(report.observations).toMatchObject({
+		clientAttempts: 2,
+		firstAttemptTimedOut: false,
+		rateLimitObserved: true,
+		retryAfterSeconds: 0,
+		partnerRequests: 2,
+		committedOrders: 1,
+	})
+	expect(report.assertions.every(({ status }) => status === 'PASS')).toBe(true)
+	expect(report.decision).toEqual({ status: 'CERTIFIED', reasonCodes: [] })
+
+	const serialized = JSON.stringify(report)
+	expect(serialized).not.toContain(controlToken)
+	expect(serialized).not.toContain(partnerApiKey)
+	expect(serialized).not.toContain('order:rate-limit-safe-run:ORDER-123')
+})
+
+test('rate-limit negative control blocks when stable idempotency evidence is absent', async () => {
+	const baseUrl = await startSimulator()
+	const report = await certify({
+		baseUrl,
+		controlToken,
+		partnerApiKey,
+		profile: 'rate-limit-then-success',
+		mode: 'negative-control',
+		runId: 'rate-limit-negative-control-run',
+	})
+
+	expect(report.observations).toMatchObject({
+		partnerRequests: 2,
+		committedOrders: 1,
+	})
+	expect(
+		report.assertions.find(({ id }) => id === 'stable-idempotency-evidence')
+			?.status,
+	).toBe('FAIL')
+	expect(report.decision.status).toBe('BLOCKED')
 	expect(() => assertExpectedDecision(report, 'BLOCKED')).not.toThrow()
 })
 
