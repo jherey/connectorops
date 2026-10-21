@@ -77,6 +77,26 @@ payloads in an entry.
   commit.
 - **Status:** Open
 
+### F-009: Certification tests import simulator source through a relative path
+
+- **Observed:** 2026-10-22
+- **Context:** Testing the certification engine against the in-memory AcmeCRM
+  simulator harness
+- **Friction:** The simulator has no formal test-harness export, so the
+  certification test reaches across workspace boundaries into application
+  source using `../../../apps/acme-api/src/...` imports.
+- **Evidence:** `packages/certification/test/certify.test.ts` imports `buildApp`
+  and `MemorySimulatorStore` directly from `apps/acme-api/src`.
+- **Impact:** Internal simulator file moves can break certification tests, and
+  the supported boundary between the application and certification packages is
+  unclear.
+- **Workaround:** Keep the relative import test-only; production certification
+  code does not depend on AcmeCRM simulator internals.
+- **Next action:** Define a stable test-harness export, either from
+  `@connectorops/acme-api` or a dedicated test-support workspace, before more
+  certification suites reuse these helpers.
+- **Status:** Open
+
 ## Addressed friction
 
 ### F-003: The default npm cache directory was unavailable in the cloud image
