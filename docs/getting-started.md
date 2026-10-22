@@ -122,6 +122,14 @@ application dependencies at startup or build time.
 
 ## Troubleshooting and friction
 
+If `npm run dev` ends with `unknown flag: --build`, update to the latest
+`main`. Older revisions replaced Docker Desktop's configuration and hid its
+Compose plugin. The temporary workaround is:
+
+```bash
+DOCKER_CONFIG="$HOME/.docker" npm run dev
+```
+
 Record observed slow starts, broken commands, misleading errors, and missing
 documentation in [`friction-log.md`](friction-log.md). Include the command and
 evidence, but never include secret values or customer payloads.

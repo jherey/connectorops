@@ -61,6 +61,22 @@ payloads in an entry.
 
 ## Addressed friction
 
+### F-016: Docker Desktop could not find Compose through the wrapper
+
+- **Observed:** 2026-10-22
+- **Resolved:** 2026-10-22
+- **Context:** Starting the local stack on macOS with `npm run dev`
+- **Friction:** The Compose wrapper always replaced `DOCKER_CONFIG` with a
+  repository-local directory. Docker Desktop installs its Compose plugin under
+  the user's Docker configuration, so the replacement hid the plugin.
+- **Evidence:** The custom node and simulator packed successfully, then Docker
+  exited with `unknown flag: --build` instead of running `docker compose up`.
+- **Impact:** None of the three local services started.
+- **Resolution:** The wrapper now uses the default Docker configuration when
+  the home directory is writable. It uses the repository fallback only on
+  restricted environments such as the cloud runner.
+- **Status:** Addressed
+
 ### F-015: `npm ci` failed when the shell used Node 26
 
 - **Observed:** 2026-10-22
