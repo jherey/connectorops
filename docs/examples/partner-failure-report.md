@@ -1,16 +1,16 @@
 # Partner failure report: duplicate order after ambiguous timeout
 
-> Generated example from the deliberately unsafe control. It contains synthetic data only.
+> Generated example from the unsafe test client. It contains synthetic data only.
 
-| Field | Value |
-| --- | --- |
-| Decision | `BLOCKED` |
-| Scenario | `timeout-after-commit` |
-| Operation | `order.create` |
-| Run | `example-unsafe-timeout` |
-| Failed requirement | `exactly-once` |
-| Expected | `{"committedOrders":1}` |
-| Observed | `{"committedOrders":2}` |
+| Field              | Value                    |
+| ------------------ | ------------------------ |
+| Decision           | `BLOCKED`                |
+| Scenario           | `timeout-after-commit`   |
+| Operation          | `order.create`           |
+| Run                | `example-unsafe-timeout` |
+| Failed requirement | `exactly-once`           |
+| Expected           | `{"committedOrders":1}`  |
+| Observed           | `{"committedOrders":2}`  |
 
 ## Impact
 

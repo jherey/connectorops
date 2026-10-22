@@ -17,8 +17,8 @@ an owner password to bypass that security boundary.
 Run the repeatable journey after the Compose services are healthy:
 
 ```bash
-ACME_API_KEY='<local partner key>' node scripts/n8n-bootstrap.mjs
-ACME_CONTROL_TOKEN='<local control token>' node scripts/n8n-execute.mjs
+ACME_API_KEY='<local partner key>' npm run workflow:bootstrap
+ACME_CONTROL_TOKEN='<local control token>' npm run workflow:execute
 ```
 
 The workflow sets a 100 ms request timeout while the execution script configures
@@ -26,3 +26,6 @@ the simulator's first response for a 400 ms delay. The AcmeCRM node passes that
 timeout to n8n's HTTP transport, recognizes n8n's wrapped timeout error, and
 retries with the same idempotency key. The execution script fails unless it
 observes `created` followed by `replayed` and exactly one persisted order.
+
+To execute the workflow in the editor and capture the result, follow the
+[screenshot guide](../docs/screenshot-guide.md).

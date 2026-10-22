@@ -36,8 +36,8 @@ When startup completes:
 - n8n: <http://localhost:5678>
 - AcmeCRM readiness: <http://localhost:3001/healthz/readiness>
 
-In another terminal, verify that the actual services—not only their
-containers—are ready:
+In another terminal, verify the services through their readiness endpoints.
+Container status alone does not prove that the applications are ready.
 
 ```bash
 npm run smoke
@@ -49,7 +49,7 @@ Stop the services without deleting their databases:
 npm run down
 ```
 
-To deliberately delete local database and n8n state, run
+To delete local database and n8n state, run
 `docker compose down --volumes`. This is destructive and should not be the
 normal stop command.
 

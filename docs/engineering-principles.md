@@ -10,24 +10,20 @@ We are adopting the principles, not cloning Epicflare's Cloudflare-specific
 architecture. ConnectorOps is an n8n and container-based system, so its runtime
 choices remain independent.
 
-## 1. Make the correct path the easiest path
+## 1. Provide one documented development path
 
-Epicflare provides one obvious development entry point that starts the app and
-its mock dependencies. ConnectorOps should offer the same experience:
+Epicflare provides one development entry point that starts the app and its mock
+dependencies. ConnectorOps documents install, startup, workflow import, and
+certification commands in one guide.
 
-```text
-install -> start -> seed -> certify
-```
+The commands must work without prompts in CI. A new developer should not need
+hidden resource identifiers or undocumented terminal sessions.
 
-The eventual commands should be non-interactive, documented, and suitable for
-both a new developer and CI. Starting the project must not require manually
-assembling several terminals or copying hidden resource identifiers.
-
-## 2. Treat partner simulators as first-class products
+## 2. Maintain the partner simulator as a service
 
 Epicflare's third-party mocks run locally and in preview environments, keep
-their own state, and expose discoverable debugging surfaces. The AcmeCRM
-simulator should follow the same pattern:
+their own state, and expose endpoints for inspecting test activity. The
+AcmeCRM simulator follows the same pattern:
 
 - Mirror realistic API semantics instead of returning hard-coded success.
 - Persist captured requests separately from application data.
@@ -49,9 +45,9 @@ Preview environments also need distinct databases, credentials, and service
 names. A pull request must not be able to alter another preview or the public
 demo.
 
-## 4. Prefer deterministic, offline tests
+## 4. Prefer deterministic offline tests
 
-Epicflare favors local fakes and high-signal end-to-end journeys over tests that
+Epicflare favors local fakes and focused end-to-end journeys over tests that
 depend on public services. This is essential for ConnectorOps: a connector
 certification test must fail because behavior changed, not because a vendor
 sandbox was unavailable.
@@ -66,20 +62,19 @@ Use:
 Tests should describe business-observable behavior, such as "a timed-out create
 produces exactly one order," rather than implementation details.
 
-## 5. Turn recurring advice into enforcement
+## 5. Automate repeated review checks
 
-Epicflare's harness guidance recommends promoting repeated review feedback from
-documentation into tests, lint rules, or scripts. ConnectorOps will use the
-same ladder:
+Epicflare's repository guidance moves repeated review feedback from
+documentation into tests, lint rules, or scripts. ConnectorOps uses the same
+sequence:
 
 1. Document the expected pattern.
 2. Add a regression test when it can fail behaviorally.
 3. Add a static check when the rule can be checked mechanically.
 4. Encode repeated multi-step work in a command.
 
-If reviewers repeatedly remind contributors to redact tokens, token redaction
-should become a mandatory certification assertion—not a longer paragraph in a
-style guide.
+If reviewers repeatedly remind contributors to redact tokens, add a mandatory
+certification assertion. Do not add another paragraph to a style guide.
 
 ## 6. Keep repository guidance navigable
 
@@ -89,11 +84,11 @@ begins:
 
 - Keep top-level contributor guidance brief.
 - Document setup, testing, architecture, and release behavior near their
-  sources of truth.
+  code or configuration that they describe.
 - Update documentation in the same change as the behavior it describes.
 - Assume knowledge that exists only in chat will be lost.
 
-## 7. Make quality legible
+## 7. Use one repository validation command
 
 The repository should have one validation command that runs the relevant
 format, lint, type, build, and test gates. Individual checks remain available
@@ -146,10 +141,10 @@ it contains environment bindings, and reproducible from declared inputs.
   Epicflare, but not required for an n8n container deployment.
 - Bun may be evaluated when implementation starts; it is not adopted merely
   because Epicflare uses it.
-- A full preview platform is deferred until the thin vertical slice works.
+- A full preview platform is deferred until the first workflow works.
 - ConnectorOps will not inherit framework abstractions that do not contribute
   to connector certification.
 
-The transferable lesson is operational discipline: local parity, deterministic
-tests, explicit architecture, disposable environments, and proof that the
-deployed artifact is the artifact that passed validation.
+ConnectorOps applies the parts that can be checked in this repository. Local
+and CI tests use the same simulator, architecture decisions are versioned, and
+health checks report the deployed revision.

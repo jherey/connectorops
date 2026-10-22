@@ -8,7 +8,7 @@ runtime option on this node.
 
 ## Operations
 
-### Order: Create
+### Create an order
 
 Creates an order using a stable, non-identifying idempotency key derived from
 the external order ID. Transient failures use bounded retries and honor a

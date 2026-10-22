@@ -1,6 +1,8 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
+import { format, resolveConfig } from 'prettier'
+
 import { buildApp } from '../apps/acme-api/dist/app.js'
 import { MemorySimulatorStore } from '../apps/acme-api/dist/store.js'
 import { certify } from '../packages/certification/dist/index.js'
@@ -61,8 +63,8 @@ try {
 	await Promise.all([
 		writeJson('certified-scorecard.json', safe),
 		writeJson('blocked-scorecard.json', negativeControl),
-		writeFile(
-			resolve(outputDirectory, 'partner-failure-report.md'),
+		writeFormatted(
+			'partner-failure-report.md',
 			partnerFailureReport(negativeControl),
 		),
 	])
@@ -74,9 +76,15 @@ try {
 }
 
 async function writeJson(fileName, value) {
+	await writeFormatted(fileName, `${JSON.stringify(value, null, 2)}\n`)
+}
+
+async function writeFormatted(fileName, value) {
+	const filePath = resolve(outputDirectory, fileName)
+	const config = (await resolveConfig(filePath)) ?? {}
 	await writeFile(
-		resolve(outputDirectory, fileName),
-		`${JSON.stringify(value, null, 2)}\n`,
+		filePath,
+		await format(value, { ...config, filepath: filePath }),
 	)
 }
 
@@ -87,7 +95,7 @@ function partnerFailureReport(report) {
 
 	return `# Partner failure report: duplicate order after ambiguous timeout
 
-> Generated example from the deliberately unsafe control. It contains synthetic data only.
+> Generated example from the unsafe test client. It contains synthetic data only.
 
 | Field | Value |
 | --- | --- |
