@@ -105,9 +105,12 @@ Then import and execute the n8n workflow:
 
 ```bash
 # Complete the one-time n8n owner setup in the UI, then in another terminal:
-ACME_API_KEY='<local partner key>' npm run workflow:bootstrap
-ACME_CONTROL_TOKEN='<local control token>' npm run workflow:execute
+ACME_API_KEY=connectorops-local-partner-key npm run workflow:bootstrap
+ACME_CONTROL_TOKEN=connectorops-local-control-token npm run workflow:execute
 ```
+
+These are synthetic local values from `.env.example`. They are not credentials
+for an external AcmeCRM account. Replace them in any shared deployment.
 
 The execution succeeds only when real n8n produces two partner requests with
 `created → replayed`, one stable key hash, and one committed order. Stop without

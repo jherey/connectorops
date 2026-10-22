@@ -17,9 +17,12 @@ an owner password to bypass that security boundary.
 Run the repeatable journey after the Compose services are healthy:
 
 ```bash
-ACME_API_KEY='<local partner key>' npm run workflow:bootstrap
-ACME_CONTROL_TOKEN='<local control token>' npm run workflow:execute
+ACME_API_KEY=connectorops-local-partner-key npm run workflow:bootstrap
+ACME_CONTROL_TOKEN=connectorops-local-control-token npm run workflow:execute
 ```
+
+These values authenticate only against the local simulator configured by
+`.env.example`. No external partner account is required.
 
 The workflow sets a 100 ms request timeout while the execution script configures
 the simulator's first response for a 400 ms delay. The AcmeCRM node passes that

@@ -38,7 +38,10 @@ Copy `.env.example` to `.env` only when you need to override the local defaults.
 The committed example contains development-only values and is not suitable for
 a public deployment. `ACME_CONTROL_TOKEN` protects simulator fault controls,
 and `ACME_API_KEY` represents the partner credential exercised by the custom
-node. Replace both outside local development.
+node. The local values are `connectorops-local-control-token` and
+`connectorops-local-partner-key`. They authenticate only against the local
+simulator, so no external partner account is required. Replace both values
+outside local development.
 
 ## Run the complete local topology
 

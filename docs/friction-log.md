@@ -61,6 +61,22 @@ payloads in an entry.
 
 ## Addressed friction
 
+### F-017: Local credential placeholders implied an external signup
+
+- **Observed:** 2026-10-22
+- **Resolved:** 2026-10-22
+- **Context:** Importing the AcmeCRM credential and workflow into local n8n
+- **Friction:** The README used `<local partner key>` without saying where to
+  get it. The placeholder suggested that the developer needed an external
+  AcmeCRM account or a generated n8n secret.
+- **Evidence:** `.env.example` already defines the simulator key as
+  `connectorops-local-partner-key`.
+- **Impact:** A developer could stop after starting n8n because the next command
+  appeared to require an unavailable credential.
+- **Resolution:** The local commands now use the exact synthetic values and
+  state that no external partner account is required.
+- **Status:** Addressed
+
 ### F-016: Docker Desktop could not find Compose through the wrapper
 
 - **Observed:** 2026-10-22
