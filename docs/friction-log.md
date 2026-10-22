@@ -61,6 +61,24 @@ payloads in an entry.
 
 ## Addressed friction
 
+### F-014: Evidence generation left tracked files unformatted
+
+- **Observed:** 2026-10-22
+- **Resolved:** 2026-10-22
+- **Context:** Running the code-quality job after regenerating application
+  evidence
+- **Friction:** The evidence script wrote JSON with two-space indentation and
+  emitted Markdown without applying the repository's Prettier configuration.
+- **Evidence:** GitHub Actions failed `npm run format:check` for
+  `blocked-scorecard.json`, `certified-scorecard.json`, and
+  `partner-failure-report.md`.
+- **Impact:** The code-quality job failed even though the generated reports
+  contained valid evidence.
+- **Resolution:** The generator now resolves the repository's Prettier settings
+  and formats each JSON and Markdown file before writing it. Running
+  `npm run evidence:generate && npm run format:check` now succeeds.
+- **Status:** Addressed
+
 ### F-001: Selected repository had no remotely available branch
 
 - **Observed:** 2026-10-21
