@@ -1,7 +1,7 @@
 # Deployment
 
 ConnectorOps has three deployment profiles. They use the same application
-images but make different cost and complexity trade-offs.
+images with different infrastructure requirements.
 
 ## 1. Local development and CI
 
@@ -16,20 +16,20 @@ n8n (single process) --------> AcmeCRM simulator
    +------------> PostgreSQL <--------+
 ```
 
-Planned services:
+Services:
 
 - `n8n`: the editor, webhook endpoints, and workflow execution
 - `postgres`: n8n metadata plus ConnectorOps certification state in separate
   databases or schemas
 - `acme-api`: the TypeScript partner simulator and captured-request dashboard
-- `report`: optional thin scorecard UI; initially this can be generated output
-  rather than a separate service
+- `report`: a possible scorecard UI. The current version generates files and
+  does not run this service.
 
 The custom ConnectorOps node is built into the n8n development image. Seeded
 fixtures and imported workflow definitions make the demo reproducible.
 
-This profile deliberately avoids Redis and separate n8n workers. A single n8n
-process is easier to understand and is sufficient to prove the product.
+This profile omits Redis and separate n8n workers. One n8n process can run the
+current certification workload.
 
 ## 2. Public portfolio demo
 
@@ -54,8 +54,8 @@ The simulator is safe to expose only with authentication and request-size/rate
 limits. Its fault-control endpoints require a separate admin credential from
 the credential used by the custom node.
 
-This is the recommended application deployment: inexpensive, easy for a
-reviewer to understand, and close to the local environment.
+Use this profile for a public application demo. It keeps PostgreSQL managed and
+runs the same application images used in local testing.
 
 ## 3. Production-shaped reference
 
@@ -106,12 +106,13 @@ losing it makes stored n8n credentials unusable.
 
 ## Images and artifacts
 
-The build should produce immutable images tagged with a Git commit SHA:
+The build produces immutable images tagged with a Git commit SHA.
 
-- `connectorops-n8n:<sha>` — pinned n8n version plus the custom node
-- `connectorops-acme-api:<sha>` — partner simulator
-- `connectorops-report:<sha>` — only if a separate report service becomes
-  necessary
+| Image                         | Contents                               |
+| ----------------------------- | -------------------------------------- |
+| `connectorops-n8n:<sha>`      | The pinned n8n version and custom node |
+| `connectorops-acme-api:<sha>` | The partner simulator                  |
+| `connectorops-report:<sha>`   | Reserved for a future report service   |
 
 Workflow exports, scenario definitions, database migrations, and node source
 remain version-controlled. Runtime data and secrets do not.

@@ -26,17 +26,14 @@ can be delegated without losing accountability.
 
 ## Evidence gates
 
-1. **Foundation:** pinned tools, lockfile, one start path, CI, friction log.
-2. **Safe vertical slice:** committed write plus timeout, stable retry key,
-   exactly one business order.
-3. **Negative control:** same fault, unsafe retry, duplicate side effect,
-   required assertion blocked.
-4. **Real n8n journey:** versioned workflow invokes the packaged custom node;
-   execution harness proves partner effects and contains no secrets.
-5. **Second deep scenario:** standards-based rate-limit response, stable retry,
-   memory/PostgreSQL parity, safe and unsafe decisions.
-6. **Application package:** generated scorecards, partner report, ADRs, demo
-   script, limitations, and reproducible commands.
+| Gate                | Required evidence                                                                                |
+| ------------------- | ------------------------------------------------------------------------------------------------ |
+| Foundation          | Pinned tools, lockfile, one start path, CI, and a friction log                                   |
+| Safe vertical slice | A committed write followed by a timeout, a stable retry key, and one business order              |
+| Negative control    | The same fault, an unsafe retry, a duplicate side effect, and a blocked assertion                |
+| Real n8n journey    | A versioned workflow that invokes the packaged node, plus a secret-free execution result         |
+| Second scenario     | A standards-based rate-limit response, stable retry, store parity, and safe and unsafe decisions |
+| Application package | Generated scorecards, a partner report, decisions, a demo script, limitations, and commands      |
 
 Each gate is merged only after its repository-wide validation passes.
 
@@ -45,7 +42,7 @@ Each gate is merged only after its repository-wide validation passes.
 1. Agree the scenario, operation, observation, and evidence contracts.
 2. Prove the custom node can cross the real simulator boundary.
 3. Inspect captured attempts and business side effects for the safe path.
-4. Verify the same harness detects the negative control.
+4. Verify that the same test runner detects the negative control.
 5. Review the evidence package against explicit policy, not a polished demo.
 
 ## Key risks

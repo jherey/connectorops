@@ -6,7 +6,7 @@
 ## Context
 
 Partner sandboxes are shared, credential-gated, rate-limited, and rarely able
-to reproduce “commit the write, lose the response.” ConnectorOps needs the same
+to reproduce "commit the write, lose the response." ConnectorOps needs the same
 failure behavior in development, CI, and review environments.
 
 ## Decision
@@ -28,9 +28,9 @@ prerequisite for the deterministic suite.
 
 ## Alternatives rejected
 
-- **Sandbox only:** unavailable and unable to reproduce key faults reliably.
-- **HTTP mocks only:** do not prove headers, serialization, network behavior,
-  captured side effects, or the complete journey.
+A vendor sandbox cannot reproduce the required faults on demand. HTTP mocks do
+not test headers, serialization, the network boundary, or captured side
+effects. Both remain useful as supplemental tests.
 
 ## Validation
 

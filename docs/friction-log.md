@@ -1,12 +1,8 @@
 # Friction log
 
-This log records moments where developing, testing, deploying, or understanding
-ConnectorOps takes more effort than it reasonably should.
-
-The purpose is not to create a complaint backlog or immediately automate every
-rough edge. We first preserve evidence, then decide whether the best response is
-better documentation, a clearer error, a script, a test, an architectural
-change, or no change at all.
+This log records failed commands, slow setup, missing instructions, and
+environment differences encountered while building ConnectorOps. Each entry
+includes evidence and a next action.
 
 ## How to log friction
 
@@ -43,46 +39,12 @@ payloads in an entry.
 
 ## Open friction
 
-### F-001: Selected repository has no remotely available branch
-
-- **Observed:** 2026-10-21
-- **Context:** Preparing the cloud development environment for the selected
-  `jherey/n8n` repository at `main`
-- **Friction:** The checkout contained no project files, and the requested
-  remote branch did not exist.
-- **Evidence:** `git ls-remote origin` returned no references;
-  `git fetch --dry-run origin main` returned
-  `fatal: couldn't find remote ref main`; local `HEAD` is unborn.
-- **Impact:** Dependencies, startup, and tests could not be discovered or run.
-- **Workaround:** Product discovery and documentation continued in the unborn
-  local checkout.
-- **Next action:** Rename the GitHub repository to `connectorops`, establish a
-  `main` branch with the approved project foundation, and update the cloud
-  environment repository selection.
-- **Status:** Open
-
-### F-002: The repository identity does not match the product
-
-- **Observed:** 2026-10-21
-- **Context:** Documenting ConnectorOps in a repository named `n8n`
-- **Friction:** The repository name suggests a fork of the n8n platform rather
-  than a separate connector-readiness product.
-- **Evidence:** The configured remote is `jherey/n8n`, while all project
-  documentation and the proposed package names use `ConnectorOps`.
-- **Impact:** Reviewers may misunderstand the project's purpose, and future
-  package/deployment naming would require avoidable migration work.
-- **Workaround:** Use `ConnectorOps` consistently in documentation and avoid
-  publishing packages or deployment resources under the old name.
-- **Next action:** Rename the empty remote before the first published project
-  commit.
-- **Status:** Open
-
 ### F-009: Certification tests import simulator source through a relative path
 
 - **Observed:** 2026-10-22
 - **Context:** Testing the certification engine against the in-memory AcmeCRM
-  simulator harness
-- **Friction:** The simulator has no formal test-harness export, so the
+  simulator
+- **Friction:** The simulator has no supported test-server export, so the
   certification test reaches across workspace boundaries into application
   source using `../../../apps/acme-api/src/...` imports.
 - **Evidence:** `packages/certification/test/certify.test.ts` imports `buildApp`
@@ -92,12 +54,40 @@ payloads in an entry.
   unclear.
 - **Workaround:** Keep the relative import test-only; production certification
   code does not depend on AcmeCRM simulator internals.
-- **Next action:** Define a stable test-harness export, either from
+- **Next action:** Define a stable test-server export, either from
   `@connectorops/acme-api` or a dedicated test-support workspace, before more
   certification suites reuse these helpers.
 - **Status:** Open
 
 ## Addressed friction
+
+### F-001: Selected repository had no remotely available branch
+
+- **Observed:** 2026-10-21
+- **Resolved:** 2026-10-22
+- **Context:** Preparing the cloud environment for `jherey/n8n` at `main`
+- **Friction:** The remote had no project files or branches.
+- **Evidence:** `git ls-remote origin` returned no references, and
+  `git fetch --dry-run origin main` could not find `main`.
+- **Impact:** The environment had no dependencies, startup command, or tests.
+- **Resolution:** Build the project on a local `main` branch, rename the GitHub
+  repository to `jherey/connectorops`, and push the tested history. The remote
+  `HEAD` now resolves to `refs/heads/main`.
+- **Status:** Addressed
+
+### F-002: The repository name did not match the product
+
+- **Observed:** 2026-10-21
+- **Resolved:** 2026-10-22
+- **Context:** Building ConnectorOps in a repository named `n8n`
+- **Friction:** The old name suggested a fork of n8n rather than a separate
+  connector certification project.
+- **Evidence:** The local packages used `ConnectorOps` while the remote URL was
+  `jherey/n8n`.
+- **Impact:** A reviewer could misunderstand the project's purpose.
+- **Resolution:** Rename the repository to `jherey/connectorops` and update the
+  Git remote before publishing `main`.
+- **Status:** Addressed
 
 ### F-013: Non-success HTTP responses discarded retry guidance
 

@@ -23,7 +23,7 @@ failures emerge from the boundaries:
 - A request succeeds remotely but its response is lost.
 - Long-running operations finish asynchronously.
 - API fields change without the connector changing at the same time.
-- Error messages contain too little context—or too much sensitive context.
+- Error messages omit useful context or expose sensitive context.
 
 Each issue can cross company boundaries. Without repeatable evidence, an n8n
 engineer and partner engineer may disagree about the cause, expected behavior,
@@ -86,13 +86,15 @@ column separates the executable slice from the roadmap.
 Certification is deterministic. Each required scenario is either passed,
 failed, or not run. A required failure or missing result blocks release.
 
-An initial scorecard groups results into five dimensions:
+An initial scorecard groups results by dimension:
 
-1. **Correctness** — operations produce the expected business outcome.
-2. **Resilience** — transient failures recover without corrupting state.
-3. **Security** — credentials and sensitive payload fields remain protected.
-4. **Scale** — pagination, bulk operations, and throttling remain bounded.
-5. **Operability** — failures carry correlation IDs and actionable evidence.
+| Dimension   | What it measures                                                   |
+| ----------- | ------------------------------------------------------------------ |
+| Correctness | Operations produce the expected business outcome.                  |
+| Resilience  | Transient failures recover without corrupting state.               |
+| Security    | Credentials and sensitive payload fields remain protected.         |
+| Scale       | Pagination, bulk operations, and throttling remain bounded.        |
+| Operability | Failures include correlation IDs and evidence for the next action. |
 
 A numeric score may help compare runs, but it never converts a required failure
 into a pass.
@@ -114,7 +116,7 @@ The completed vertical slice demonstrates that:
 - A new developer can start the system and run certification from documented
   commands.
 - The timeout-after-commit safe scenario creates exactly one remote order.
-- The deliberately unsafe timeout control creates duplicates and is blocked.
+- The unsafe timeout control creates duplicates and is blocked.
 - Rate-limit behavior can be measured rather than inferred from logs.
 - The complete certification run is reproducible in CI without public APIs.
 
@@ -132,7 +134,6 @@ success measures.
 
 ## Why this is valuable beyond the demonstration
 
-The reusable asset is not the fictional AcmeCRM node. It is the operating model:
-a scenario contract, a repeatable simulator, a shared readiness rubric, and an
-evidence format that helps an integration team and a strategic partner resolve
-failures together.
+The reusable parts are the scenario contract, simulator, readiness rules, and
+evidence format. Integration and partner engineers can use the same run data to
+resolve a failure.

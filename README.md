@@ -10,8 +10,8 @@ that boundary failure into a repeatable certification test with an auditable
 
 The reference integration is a custom AcmeCRM n8n node. Its simulator commits
 an order and delays the response beyond the client timeout. The safe connector
-retries with the same idempotency key and produces one order. A deliberately
-unsafe control retries without a key, produces two orders, and is blocked.
+retries with the same idempotency key and produces one order. The unsafe test
+client retries without a key, produces two orders, and is blocked.
 
 ```text
                          first response is lost
@@ -23,8 +23,8 @@ unsafe control retries without a key, produces two orders, and is blocked.
  control:  2 requests · 2 orders · BLOCKED
 ```
 
-That negative control matters: it proves the harness can detect the defect it
-claims to prevent, rather than merely generating a green report.
+The negative control proves that the test runner detects duplicate orders. A
+passing report alone would not prove that.
 
 ## What is implemented
 
@@ -40,9 +40,8 @@ claims to prevent, rather than merely generating a green report.
 - Generated safe and negative-control evidence, CI, architecture decisions,
   deployment guidance, and a friction log
 
-The narrowness is deliberate. Authentication refresh, pagination, webhooks,
-async jobs, and contract drift remain roadmap scenarios; they are not presented
-as completed work.
+The implemented scope covers two failure scenarios. Authentication refresh,
+pagination, webhooks, async jobs, and contract drift remain on the roadmap.
 
 ## Proven journeys
 
@@ -76,8 +75,8 @@ flowchart LR
 n8n makes the connector invocation visible. TypeScript owns partner-protocol
 correctness and the deterministic policy. The current workflow is intentionally
 small (`Manual Trigger → AcmeCRM Safe Retry`); scenario setup and evidence
-verification are performed by the execution harness. Moving the full journey
-onto the canvas is a documented next increment, not a hidden claim.
+verification run in the execution script. Moving the full journey onto the
+canvas is the next planned increment.
 
 The decisions behind those boundaries are in [docs/decisions](docs/decisions),
 and the ownership and delivery model is in the
@@ -116,12 +115,12 @@ The complete setup, readiness checks, and focused commands are in
 [getting started](docs/getting-started.md). Deployment shapes and security
 boundaries are in [deployment](docs/deployment.md).
 
-## Product and engineering judgment
+## Design choices
 
-ConnectorOps is an operating model, not a test dashboard. A partner contract,
-a controlled simulator, connector behavior, observation evidence, and release
-policy have explicit interfaces and owners. AI may summarize sanitized evidence
-later, but it cannot change an assertion or release decision.
+ConnectorOps defines interfaces and owners for the partner contract, simulator,
+connector, evidence, and release policy. It does not add a dashboard. AI may
+summarize sanitized evidence later, but it cannot change an assertion or
+release decision.
 
 The design borrows useful principles from
 [Epicflare](https://github.com/epicweb-dev/epicflare): one obvious development
@@ -139,6 +138,10 @@ impact and resolution in the [friction log](docs/friction-log.md).
 Use the [three-minute demo script](docs/demo-script.md). It shows the real n8n
 safe path, then the executable unsafe control and its blocked evidence. It does
 not require a bespoke dashboard or a fabricated screenshot.
+
+Use the [screenshot guide](docs/screenshot-guide.md) to start n8n, import the
+workflow, verify the retry behavior, and capture the canvas without exposing a
+credential.
 
 For the broader user problem, readiness model, and roadmap, see the
 [product use case](docs/product-use-case.md).

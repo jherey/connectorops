@@ -27,8 +27,9 @@ Certification continues to work when no model is configured.
 
 ## Alternatives rejected
 
-- **LLM decides readiness:** variable and insufficiently accountable.
-- **No possible AI use:** unnecessarily excludes bounded explanation value.
+An LLM cannot decide readiness because the result would vary for the same
+evidence. Excluding all AI use would also remove a possible tool for summarizing
+sanitized evidence. The decision keeps that summary separate from the gate.
 
 ## Validation
 
