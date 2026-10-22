@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 const WORKFLOW_ID = 'connectorops-acmecrm-safe-retry'
 const RUN_ID = 'cli-safe-retry'
 const EXPECTED_EXTERNAL_ORDER_ID = 'ORDER-CLI-SAFE-RETRY'
+const CLI_TASK_BROKER_PORT = '5680'
 const scriptDirectory = dirname(fileURLToPath(import.meta.url))
 const repositoryRoot = resolve(scriptDirectory, '..')
 const controlToken = requireSecret('ACME_CONTROL_TOKEN')
@@ -18,6 +19,8 @@ await createRun()
 const execution = runCompose([
 	'exec',
 	'-T',
+	'-e',
+	`N8N_RUNNERS_BROKER_PORT=${CLI_TASK_BROKER_PORT}`,
 	'n8n',
 	'n8n',
 	'execute',

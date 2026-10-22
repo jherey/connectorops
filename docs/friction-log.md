@@ -61,6 +61,22 @@ payloads in an entry.
 
 ## Addressed friction
 
+### F-018: The workflow CLI collided with the running n8n task broker
+
+- **Observed:** 2026-10-22
+- **Resolved:** 2026-10-22
+- **Context:** Running `npm run workflow:execute` while the local n8n service
+  was active
+- **Friction:** The one-off `n8n execute` process tried to start its task broker
+  on port `5679`, which the main n8n process already used.
+- **Evidence:** The command exited after reporting that the n8n Task Broker port
+  `5679` was already in use.
+- **Impact:** The simulator scenario was configured, but the workflow did not
+  execute and no certification result was produced.
+- **Resolution:** The execution script assigns port `5680` to the one-off CLI
+  task broker. The main n8n process remains on `5679`.
+- **Status:** Addressed
+
 ### F-017: Local credential placeholders implied an external signup
 
 - **Observed:** 2026-10-22
