@@ -87,15 +87,23 @@ and the ownership and delivery model is in the
 Prerequisites: Node.js 24, npm 11, and Docker with Compose.
 
 ```bash
+node --version # must report v24.x
+npm --version  # must report v11.x
+docker compose version
 npm ci
-npm run validate
-npm run test:integration
+npm run dev
 ```
 
-For the containerized n8n journey:
+Leave that terminal open. In a second terminal, verify that n8n, PostgreSQL,
+and the AcmeCRM simulator are ready:
 
 ```bash
-npm run dev
+npm run smoke
+```
+
+Then import and execute the n8n workflow:
+
+```bash
 # Complete the one-time n8n owner setup in the UI, then in another terminal:
 ACME_API_KEY='<local partner key>' npm run workflow:bootstrap
 ACME_CONTROL_TOKEN='<local control token>' npm run workflow:execute
@@ -104,6 +112,13 @@ ACME_CONTROL_TOKEN='<local control token>' npm run workflow:execute
 The execution succeeds only when real n8n produces two partner requests with
 `created → replayed`, one stable key hash, and one committed order. Stop without
 deleting database volumes using `npm run down`.
+
+Run the repository checks separately:
+
+```bash
+npm run validate
+npm run test:integration
+```
 
 Generate fresh application evidence from executable scenarios:
 
