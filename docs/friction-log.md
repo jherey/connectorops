@@ -61,6 +61,22 @@ payloads in an entry.
 
 ## Addressed friction
 
+### F-015: `npm ci` failed when the shell used Node 26
+
+- **Observed:** 2026-10-22
+- **Resolved:** 2026-10-22
+- **Context:** Installing dependencies on macOS after cloning the repository
+- **Friction:** The shell used Node `26.3.1`, but the project supports Node 24.
+  npm stopped before installing packages because `engine-strict=true`.
+- **Evidence:** `npm ci` returned `EBADENGINE`, with a required range of
+  `>=24 <25` and an actual Node version of `26.3.1`.
+- **Impact:** Local setup could not continue until the active Node version
+  matched the repository requirement.
+- **Resolution:** The setup guide now puts version checks and the nvm commands
+  immediately before installation. Switch to Node `24.19.0`, verify
+  `node --version`, and rerun `npm ci`.
+- **Status:** Addressed
+
 ### F-014: Evidence generation left tracked files unformatted
 
 - **Observed:** 2026-10-22

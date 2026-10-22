@@ -10,6 +10,24 @@
 Use the versions declared in `.node-version` and `package.json`. ConnectorOps
 uses npm workspaces; do not install with pnpm or Yarn.
 
+Check the active versions before installing:
+
+```bash
+node --version
+npm --version
+```
+
+Node must report `v24.x`. If you use nvm on macOS or Linux, switch versions
+with:
+
+```bash
+nvm install 24.19.0
+nvm use 24.19.0
+```
+
+The repository sets `engine-strict=true`, so `npm ci` stops with `EBADENGINE`
+on Node 23, 25, 26, or any other unsupported major version.
+
 ## Install
 
 ```bash

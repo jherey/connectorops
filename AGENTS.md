@@ -19,4 +19,5 @@ Keep this file short. Detailed guidance belongs in focused documents under
 - Keep workflow exports free of credentials and customer data.
 - Prefer deterministic local simulators over public third-party services.
 - Record observed slow starts, broken commands, or missing guidance in the
-  friction log. Promote repeated friction into a test, check, or script.
+  friction log at `docs/friction-log.md`. Promote repeated friction into a
+  test, check, or script.
